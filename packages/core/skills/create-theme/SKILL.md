@@ -147,7 +147,7 @@ const Eyebrow = ({ children }: { children: React.ReactNode }) => (
 ## Motion
 
 - Philosophy: static / subtle / rich — pick one and explain in one sentence.
-- Reusable keyframes (paste-ready, only if the philosophy is subtle or rich):
+- Reusable keyframes (paste-ready, only if the philosophy is subtle or rich). They are for entrances on pages without a timeline; motion inside a page goes through `useTimeline` and the motion kit (see `slide-authoring`), so a rich theme names which kit pieces it leans on (e.g. `<Headline>` for every page title) instead of shipping its own keyframes for them:
 
 ```css
 @keyframes fadeUp {

@@ -1,0 +1,70 @@
+---
+title: useTimeline
+description: Give a page a clock and animate it stop by stop.
+---
+
+`useTimeline(stops)` is for pages where things move: a camera pushing in, a
+cursor clicking a button, code typing itself out, a request travelling
+between boxes. It gives the page a time `t` in seconds. Entering the page
+plays `0 → stops[0]` and parks; each `→` plays on to the next stop.
+
+```tsx title="slides/pipeline/index.tsx"
+import { Connector, type Page, progress, ramp, useTimeline } from '@open-slide/core';
+
+const Pipeline: Page = () => {
+  const { t } = useTimeline([1.2, 3.0]);
+  const card = ramp(t, 0.2, 0.8);
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      <div style={{ position: 'absolute', left: 160, top: 420, opacity: card }}>Client</div>
+      <div style={{ position: 'absolute', left: 1400, top: 420, opacity: card }}>Server</div>
+      <Connector from={[420, 460]} to={[1380, 460]} k={progress(t, 1.6, 1.0)} />
+    </div>
+  );
+};
+```
+
+## Where `t` lands
+
+| Where the page is shown | `t` |
+| --- | --- |
+| Present mode, entered forward | plays to `stops[0]`, then one stop per `→` |
+| `→` while a segment is still playing | jumps to that segment's stop, then plays the next one |
+| `←` | snaps to the previous stop |
+| Entered backward, or by jumping | last stop |
+| Thumbnails, overview grid, export | last stop |
+| Preview `?step=n`, presenter panes | `stops[n]` |
+| Reduced motion | snaps to each stop |
+
+So many surfaces show the last stop that the page has to read as complete
+there.
+
+## Motion kit
+
+Everything in the kit is a pure function of `t`, so the same `t` always draws
+the same frame.
+
+| Export | Use it for |
+| --- | --- |
+| `ramp`, `progress`, `keyframes`, `phaseAt`, `pulse` | eased entrances, multi-step paths, phase switches, a brief highlight |
+| `along` | a point and heading partway along a multi-leg route |
+| `Camera` | pushing in on part of the page and pulling back out |
+| `Connector`, `Packet` | an arrow drawing itself, a request travelling along it |
+| `Flight` | a line of text flying from one box into another, rewriting itself on the way |
+| `Cursor` | a pointer moving to a target and clicking |
+| `TypedText` | code or a prompt typing out |
+| `Headline` | a title and subtitle that roll to the next one per stop, and hold across a morph cut |
+| `RollText` | any other line that changes per stop |
+| `CodeMove` | code that changes per stop, Magic Move style, or is walked through line by line |
+| `Mark` | a hand-drawn underline, circle, box, highlighter or strike drawing itself |
+| `CountUp` | a number counting up to its value |
+
+## Rules
+
+- One `useTimeline` per page, and no `Steps` on the same page.
+- Derive every animated style from `t`. CSS keyframes and timers ignore `←`,
+  previews and reduced motion.
+- Keep each movement under about a second and a half; the speaker is waiting
+  on it.
+- Prefer [`Step`](/docs/primitive/step) when blocks only need to appear in
+  order.
