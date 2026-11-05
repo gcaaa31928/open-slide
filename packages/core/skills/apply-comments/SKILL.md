@@ -44,6 +44,7 @@ Your job: read those markers, perform the described edits, and delete the marker
    - Read enough surrounding code (parent element, sibling elements, inline styles) to apply the change faithfully. A comment inside a `<div>` with an inline `background` style usually refers to that element's styling, for example.
    - When the payload has a `rect`, work out which children of the enclosing element fall inside that region (compare their positions and sizes against the rect on the 1920×1080 canvas) and apply the note to those — not to the whole enclosing element.
    - If the `note` is ambiguous, do the smallest reasonable interpretation and mention the assumption in your summary.
+   - **Animated pages.** Comments are left in the editor, which shows a `<Steps>` page fully revealed and a `useTimeline` page at its **last stop**. A note about looks ("bigger", "red", "move left") applies to that finished layout. A note about timing or order ("too fast", "should appear later", "before the arrow", "don't animate this") is about the beats: change the page's stops, the element's `at` / `duration`, or the order of its `<Step>`s, following the timeline and steps rules in `slide-authoring`. Never answer one with CSS `transition`, `@keyframes` or `setTimeout` on a timeline page.
 
 4. **Apply edits in reverse line order.**
    - Sort markers by descending `lineIndex` and process one at a time, using the `Edit` tool.
@@ -56,7 +57,7 @@ Your job: read those markers, perform the described edits, and delete the marker
 6. **Verify.**
    - After all edits, re-read the file and confirm the only remaining markers are ones you reported as skipped.
    - Confirm the edited JSX is well-formed (balanced tags, no dangling attributes). If the project's `package.json` has typecheck/lint scripts, run them with the project's package manager; scaffolded projects ship neither TypeScript nor a linter — there, rely on the running dev server (or the `build` script) to surface compile errors. Fix any errors you introduced.
-   - If the dev server is running, screenshot each edited page via `/s/<id>/preview?p=N` to confirm the change looks right — see **Previewing a page visually** in `slide-authoring`.
+   - If the dev server is running, screenshot each edited page via `/s/<id>/preview?p=N` to confirm the change looks right — see **Previewing a page visually** in `slide-authoring`. On a page with `<Steps>` or `useTimeline`, screenshot every stop with `&step=0`, `&step=1`, … up to the last, not just the finished page: a timing change can leave a middle stop half-built.
 
 7. **Report.**
    - Summarise: `N applied, M skipped` plus a one-line description of each change (including the slide id).

@@ -86,7 +86,7 @@ import { SlideCommandMenu } from '../components/command/slide-command-menu';
 import { PdfProgressToast, PptxProgressToast } from '../components/export-progress-toast';
 import { NotesDrawer } from '../components/notes-drawer';
 import { OverviewGrid } from '../components/overview-grid';
-import { openPresenterWindow, Player } from '../components/player';
+import { openPresenterWindow, Player, type PlayerStepState } from '../components/player';
 import {
   afterPaint,
   CURTAIN_FADE_MS,
@@ -231,6 +231,19 @@ export function Slide() {
   const index = Number.isFinite(rawIndex) ? Math.max(0, Math.min(pageCount - 1, rawIndex)) : 0;
   const view = searchParams.get('view') === 'assets' ? 'assets' : 'slides';
 
+  // Outside present mode every step is revealed, so only the Player knows a stop.
+  const [presentStep, setPresentStep] = useState<PlayerStepState | null>(null);
+  const step =
+    playMode &&
+    presentStep &&
+    presentStep.slideId === slideId &&
+    presentStep.index === index &&
+    presentStep.stepCount > 0
+      ? { revealed: presentStep.revealed, count: presentStep.stepCount }
+      : null;
+  const stepRevealed = step?.revealed;
+  const stepCount = step?.count;
+
   useEffect(() => {
     if (!import.meta.hot) return;
     if (!slideId || !slide || pageCount === 0) return;
@@ -240,8 +253,12 @@ export function Slide() {
       totalPages: pageCount,
       slideTitle: slide.meta?.title ?? slideId,
       view,
+      step:
+        stepRevealed === undefined || stepCount === undefined
+          ? null
+          : { revealed: stepRevealed, count: stepCount },
     });
-  }, [slideId, index, pageCount, slide, view]);
+  }, [slideId, index, pageCount, slide, view, stepRevealed, stepCount]);
 
   const switchPresentedSlide = useCallback(
     (id: string) => {
@@ -484,6 +501,7 @@ export function Slide() {
           slideId={presented.slideId}
           onSwitchSlide={switchPresentedSlide}
           fullscreen={playMode === 'fullscreen'}
+          onStepStateChange={setPresentStep}
         />
         {!presentReady && slide && pageCount > 0 && (
           <SlidePreloadLayer

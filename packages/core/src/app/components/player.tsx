@@ -58,6 +58,14 @@ type Props = {
   fullscreen?: boolean;
   /** Fade in from black on mount and fade to black before calling `onExit`. */
   curtain?: boolean;
+  onStepStateChange?: (state: PlayerStepState) => void;
+};
+
+export type PlayerStepState = {
+  slideId?: string;
+  index: number;
+  revealed: number;
+  stepCount: number;
 };
 
 export function Player({
@@ -73,6 +81,7 @@ export function Player({
   onSwitchSlide,
   fullscreen = true,
   curtain = false,
+  onStepStateChange,
 }: Props) {
   const isMobile = useIsMobile();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -323,6 +332,17 @@ export function Player({
   );
   const presenterStateRef = useRef(presenterState);
   presenterStateRef.current = presenterState;
+
+  const onStepStateChangeRef = useRef(onStepStateChange);
+  onStepStateChangeRef.current = onStepStateChange;
+  useEffect(() => {
+    onStepStateChangeRef.current?.({
+      slideId,
+      index,
+      revealed: stepAggregate.revealed,
+      stepCount: stepAggregate.stepCount,
+    });
+  }, [slideId, index, stepAggregate.revealed, stepAggregate.stepCount]);
 
   const handlePresenterCommand = useCallback(
     (msg: PresenterCommand, send: (m: PresenterCommand) => void) => {

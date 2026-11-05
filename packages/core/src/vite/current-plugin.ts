@@ -17,6 +17,7 @@ type IncomingPayload = {
   slideTitle?: unknown;
   view?: unknown;
   selection?: unknown;
+  step?: unknown;
 };
 
 type IncomingSelection = {
@@ -33,7 +34,12 @@ type Selection = {
   text: string;
 };
 
-type Cached = {
+type Step = {
+  revealed: number;
+  count: number;
+};
+
+export type CurrentState = {
   slideId: string;
   pageIndex: number;
   pageNumber: number;
@@ -42,6 +48,7 @@ type Cached = {
   view: 'slides' | 'assets';
   pagePath: string;
   selection: Selection | null;
+  step: Step | null;
 };
 
 function parseSelection(raw: unknown): Selection | null {
@@ -63,6 +70,76 @@ function parseSelection(raw: unknown): Selection | null {
   };
 }
 
+function parseStep(raw: unknown): Step | null {
+  if (raw == null || typeof raw !== 'object') return null;
+  const { revealed, count } = raw as { revealed?: unknown; count?: unknown };
+  if (typeof count !== 'number' || !Number.isFinite(count) || count < 1) return null;
+  if (typeof revealed !== 'number' || !Number.isFinite(revealed)) return null;
+  const total = Math.floor(count);
+  return { revealed: Math.max(0, Math.min(total, Math.floor(revealed))), count: total };
+}
+
+const EMPTY: CurrentState = {
+  slideId: '',
+  pageIndex: 0,
+  pageNumber: 1,
+  totalPages: 1,
+  slideTitle: '',
+  view: 'slides',
+  pagePath: '',
+  selection: null,
+  step: null,
+};
+
+// The next state after one `open-slide:current` message, or null when the
+// message should be ignored (bad slide id, nothing known yet).
+export function applyCurrent(
+  cached: CurrentState | null,
+  raw: IncomingPayload,
+  slidesDir: string,
+): CurrentState | null {
+  const next: CurrentState = { ...(cached ?? EMPTY) };
+
+  if (typeof raw?.slideId === 'string') {
+    if (!SLIDE_ID_RE.test(raw.slideId)) return null;
+
+    const totalPages =
+      typeof raw.totalPages === 'number' && Number.isFinite(raw.totalPages) && raw.totalPages > 0
+        ? Math.floor(raw.totalPages)
+        : 1;
+    const rawIndex =
+      typeof raw.pageIndex === 'number' && Number.isFinite(raw.pageIndex)
+        ? Math.floor(raw.pageIndex)
+        : 0;
+    const pageIndex = Math.max(0, Math.min(totalPages - 1, rawIndex));
+    const slideTitle = typeof raw.slideTitle === 'string' ? raw.slideTitle : raw.slideId;
+    const view = raw.view === 'assets' ? 'assets' : 'slides';
+    const pagePath = path.join(slidesDir, raw.slideId, 'index.tsx').split(path.sep).join('/');
+
+    if (cached?.slideId !== raw.slideId || cached?.pageIndex !== pageIndex) {
+      next.selection = null;
+      next.step = null;
+    }
+
+    next.slideId = raw.slideId;
+    next.pageIndex = pageIndex;
+    next.pageNumber = pageIndex + 1;
+    next.totalPages = totalPages;
+    next.slideTitle = slideTitle;
+    next.view = view;
+    next.pagePath = pagePath;
+  }
+
+  if ('selection' in raw) {
+    next.selection = parseSelection(raw.selection);
+  }
+  if ('step' in raw) {
+    next.step = parseStep(raw.step);
+  }
+
+  return next.slideId ? next : null;
+}
+
 export function currentPlugin(opts: CurrentPluginOptions): Plugin {
   const userCwd = opts.userCwd;
   const slidesDir = opts.slidesDir ?? 'slides';
@@ -70,63 +147,15 @@ export function currentPlugin(opts: CurrentPluginOptions): Plugin {
   const outFile = path.join(outDir, 'current.json');
   const tmpFile = `${outFile}.tmp`;
 
-  let cached: Cached | null = null;
+  let cached: CurrentState | null = null;
 
   return {
     name: 'open-slide:current',
     apply: 'serve',
     configureServer(server: ViteDevServer) {
       server.ws.on('open-slide:current', async (raw: IncomingPayload) => {
-        const next: Cached = cached
-          ? { ...cached }
-          : {
-              slideId: '',
-              pageIndex: 0,
-              pageNumber: 1,
-              totalPages: 1,
-              slideTitle: '',
-              view: 'slides',
-              pagePath: '',
-              selection: null,
-            };
-
-        if (typeof raw?.slideId === 'string') {
-          if (!SLIDE_ID_RE.test(raw.slideId)) return;
-
-          const totalPages =
-            typeof raw.totalPages === 'number' &&
-            Number.isFinite(raw.totalPages) &&
-            raw.totalPages > 0
-              ? Math.floor(raw.totalPages)
-              : 1;
-          const rawIndex =
-            typeof raw.pageIndex === 'number' && Number.isFinite(raw.pageIndex)
-              ? Math.floor(raw.pageIndex)
-              : 0;
-          const pageIndex = Math.max(0, Math.min(totalPages - 1, rawIndex));
-          const slideTitle = typeof raw.slideTitle === 'string' ? raw.slideTitle : raw.slideId;
-          const view = raw.view === 'assets' ? 'assets' : 'slides';
-          const pagePath = path.join(slidesDir, raw.slideId, 'index.tsx').split(path.sep).join('/');
-
-          if (cached?.slideId !== raw.slideId || cached?.pageIndex !== pageIndex) {
-            next.selection = null;
-          }
-
-          next.slideId = raw.slideId;
-          next.pageIndex = pageIndex;
-          next.pageNumber = pageIndex + 1;
-          next.totalPages = totalPages;
-          next.slideTitle = slideTitle;
-          next.view = view;
-          next.pagePath = pagePath;
-        }
-
-        if ('selection' in raw) {
-          next.selection = parseSelection(raw.selection);
-        }
-
-        if (!next.slideId) return;
-
+        const next = applyCurrent(cached, raw ?? {}, slidesDir);
+        if (!next) return;
         cached = next;
 
         const body = { ...next, updatedAt: new Date().toISOString() };
