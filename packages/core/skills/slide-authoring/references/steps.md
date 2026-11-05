@@ -1,5 +1,7 @@
 # Stepped reveals (`<Steps>` / `<Step>`)
 
+> If things should *move* inside the page rather than appear in order, see `timeline.md`.
+
 Reveal a page one beat at a time instead of showing everything at once. Wrap the deferred parts in `<Step>`, wrap the group in `<Steps>`. Each `→` reveals the next `<Step>`; `→` after the last one advances to the next page. `←` peels the last reveal back. Use it to stage attention — show framing first, then the consequence, then the turn — so the audience reads at the speaker's pace, not ahead.
 
 If `slides/build-on-reveal/` exists in this project (the demo workspace ships it), study it before authoring a stepped page; otherwise the rules and snippets below are sufficient.

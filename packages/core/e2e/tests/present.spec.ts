@@ -32,11 +32,15 @@ test.describe('present mode', () => {
     await page.keyboard.press('ArrowRight');
     await expect(page).toHaveURL(/[?&]p=2/);
     await expect(page.locator('[data-osd-step="pending"]')).toHaveCount(2);
+    const indicator = page.locator('[data-osd-step-indicator]');
+    await expect(indicator).toHaveAttribute('data-remaining', '2');
 
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('[data-osd-step="revealed"]')).toHaveCount(1);
+    await expect(indicator).toHaveAttribute('data-remaining', '1');
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('[data-osd-step="revealed"]')).toHaveCount(2);
+    await expect(indicator).toHaveCount(0);
 
     await page.keyboard.press('ArrowRight');
     await expect(page).toHaveURL(/[?&]p=3/);
@@ -45,6 +49,80 @@ test.describe('present mode', () => {
     await page.keyboard.press('ArrowLeft');
     await expect(page).toHaveURL(/[?&]p=2/);
     await expect(page.locator('[data-osd-step="revealed"]')).toHaveCount(2);
+  });
+
+  test('a timeline parks at each stop before the page advances', async ({ page }) => {
+    await openSlide(page, 'steps', '?p=3');
+    await enterPlayMode(page);
+    const state = page.getByTestId('timeline-state');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(page).toHaveURL(/[?&]p=4/);
+    await expect(state).toHaveAttribute('data-stop', '0');
+    await expect(state).toHaveAttribute('data-t', '1.00');
+    await expect(page.locator('[data-osd-step-indicator]')).toHaveAttribute('data-remaining', '2');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(state).toHaveAttribute('data-stop', '1');
+    await expect(state).toHaveAttribute('data-t', '2.00');
+    await page.keyboard.press('ArrowRight');
+    await expect(state).toHaveAttribute('data-stop', '2');
+    await expect(state).toHaveAttribute('data-t', '3.00');
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(state).toHaveAttribute('data-stop', '1');
+    await expect(state).toHaveAttribute('data-t', '2.00');
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page).toHaveURL(/[?&]p=3/);
+
+    await page.keyboard.press('Home');
+    await expect(page).toHaveURL(/[?&]p=1/);
+    // The URL updates a render before the key handler rebinds; wait for the page itself.
+    await expect(page.getByText('Steps page one')).toBeVisible();
+    await page.keyboard.press('End');
+    await expect(page).toHaveURL(/[?&]p=4/);
+    await expect(state).toHaveAttribute('data-stop', '2');
+    await expect(state).toHaveAttribute('data-t', '3.00');
+  });
+
+  test.describe('with motion allowed', () => {
+    test.use({ contextOptions: { reducedMotion: 'no-preference' } });
+
+    test('a timeline plays in real time up to its first stop', async ({ page }) => {
+      await openSlide(page, 'steps', '?p=3');
+      await enterPlayMode(page);
+      const state = page.getByTestId('timeline-state');
+
+      await page.keyboard.press('ArrowRight');
+      await expect(state).toHaveAttribute('data-playing', 'true');
+      await expect(state).toHaveAttribute('data-stop', '0');
+      await expect(state).toHaveAttribute('data-playing', 'false');
+      await expect(state).toHaveAttribute('data-t', '1.00');
+
+      const indicator = page.locator('[data-osd-step-indicator]');
+      await page.keyboard.press('ArrowRight');
+      await expect(indicator).toHaveAttribute('data-playing', 'true');
+      await expect(indicator).toHaveAttribute('data-remaining', '1');
+      await expect(indicator).toHaveAttribute('data-playing', 'false');
+    });
+
+    test('→ during playback lands on the stop being approached first', async ({ page }) => {
+      await openSlide(page, 'steps', '?p=3');
+      await enterPlayMode(page);
+      const state = page.getByTestId('timeline-state');
+
+      await page.keyboard.press('ArrowRight');
+      await expect(state).toHaveAttribute('data-playing', 'true');
+      await page.keyboard.press('ArrowRight');
+      await expect(state).toHaveAttribute('data-stop', '1');
+      // A retrying assertion would pass either way once t crawls past 1; read it once, right away.
+      await page.evaluate(
+        () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
+      );
+      expect(Number(await state.getAttribute('data-t'))).toBeGreaterThanOrEqual(1);
+      await expect(state).toHaveAttribute('data-t', '2.00');
+    });
   });
 
   test('typing digits jumps to a page', async ({ page }) => {

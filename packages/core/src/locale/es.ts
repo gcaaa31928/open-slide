@@ -181,6 +181,10 @@ export const es: Locale = {
     exitAria: 'Salir (Esc)',
     elapsedTime: 'Tiempo transcurrido',
     lastSlideHint: 'Última diapositiva · Pulsa Esc para salir',
+    stepsRemaining: {
+      one: 'Queda {count} animación en esta diapositiva',
+      other: 'Quedan {count} animaciones en esta diapositiva',
+    },
     helpEyebrow: 'Modo presentación',
     helpTitle: 'Atajos de teclado',
     shortcutNext: 'Diapositiva siguiente',

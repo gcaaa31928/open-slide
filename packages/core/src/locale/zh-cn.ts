@@ -178,6 +178,10 @@ export const zhCN: Locale = {
     exitAria: '退出 (Esc)',
     elapsedTime: '已用时',
     lastSlideHint: '已是最后一页 · 按 Esc 退出放映',
+    stepsRemaining: {
+      one: '本页还有 {count} 段动画',
+      other: '本页还有 {count} 段动画',
+    },
     helpEyebrow: '演示模式',
     helpTitle: '键盘快捷键',
     shortcutNext: '下一张',

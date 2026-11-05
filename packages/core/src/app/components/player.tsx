@@ -23,6 +23,7 @@ import { PresentJumpInput } from './present/jump-input';
 import { PresentLaserPointer } from './present/laser-pointer';
 import { PresentLastSlideHint } from './present/last-slide-hint';
 import { PresentProgressBar } from './present/progress-bar';
+import { PresentStepIndicator } from './present/step-indicator';
 import { useIdle } from './present/use-idle';
 import { usePointerNearBottom } from './present/use-pointer-near-bottom';
 import {
@@ -133,10 +134,13 @@ export function Player({
   const [stepAggregate, setStepAggregate] = useState<StepAggregate>({
     revealed: 0,
     stepCount: 0,
+    playing: false,
   });
   const handleAggregateChange = useCallback((a: StepAggregate) => {
     setStepAggregate((cur) =>
-      cur.revealed === a.revealed && cur.stepCount === a.stepCount ? cur : a,
+      cur.revealed === a.revealed && cur.stepCount === a.stepCount && cur.playing === a.playing
+        ? cur
+        : a,
     );
   }, []);
 
@@ -315,7 +319,7 @@ export function Player({
       stepIndex: stepAggregate.revealed,
       stepCount: stepAggregate.stepCount,
     }),
-    [index, pages.length, blackout, startedAt, stepAggregate],
+    [index, pages.length, blackout, startedAt, stepAggregate.revealed, stepAggregate.stepCount],
   );
   const presenterStateRef = useRef(presenterState);
   presenterStateRef.current = presenterState;
@@ -503,6 +507,11 @@ export function Player({
           <PresentProgressBar index={index} total={pages.length} visible={chromeVisible} />
           <PresentBlackoutOverlay mode={blackout} />
           <PresentLastSlideHint shownAt={lastSlideHintAt} />
+          <PresentStepIndicator
+            revealed={stepAggregate.revealed}
+            stepCount={stepAggregate.stepCount}
+            playing={stepAggregate.playing}
+          />
           <PresentJumpInput pageCount={pages.length} onJump={handleIndexChange} />
           <PresentLaserPointer enabled={laser} />
           <PresentControlBar

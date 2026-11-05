@@ -25,6 +25,8 @@ Each framework primitive has a full reference file under `references/` in this s
 | Webfonts | loading any non-system font | `references/webfonts.md` |
 | `useSlidePageNumber()` | rendering a page-number footer | `references/page-numbers.md` |
 | `<Steps>` / `<Step>` | staging a page's reveal | `references/steps.md` |
+| `useTimeline()` | animating motion inside a page, played one `→` at a time | `references/timeline.md` |
+| Motion kit (`ramp`, `keyframes`, `pulse`, `Camera`, `Connector`, `Packet`, `Flight`, `Headline`, `Cursor`, `TypedText`, `RollText`) | building anything that moves on a `useTimeline` page | `references/motion.md` |
 | `SlideTransition` | declaring any enter/exit animation | `references/transitions.md` |
 | `MorphElement` + `morph` | morphing a shared element across pages | `references/morph.md` |
 
@@ -272,6 +274,16 @@ Reveal a page one beat at a time: wrap deferred parts in `<Step>`, the group in 
 
 Read `references/steps.md` before authoring a stepped page — it covers composition order across multiple `<Steps>` blocks, the "headline always, body in turn" pattern, and entry-direction behavior. If `slides/build-on-reveal/` exists in this project, it is the canonical worked example.
 
+## In-page timelines (`useTimeline`)
+
+When things should *move* inside a page — a camera push, a cursor travelling to a button, code typing out — give the page a clock with `const { t } = useTimeline([1.2, 3, 5])` and derive every animated style from `t` (seconds). Entering forward plays `0 → stops[0]` and parks; each `→` plays to the next stop. Thumbnails, exports and jumps show the last stop, so the page must read as complete there. One timeline per page, and no `<Steps>` on the same page.
+
+Read `references/timeline.md` before writing one — it has the contract, where `t` lands on each surface (present, preview `?step=`, presenter, thumbnails, reduced motion), and the anti-pattern list.
+
+Build the motion from the kit in `@open-slide/core` rather than hand-rolled helpers: `ramp(t, at)` for entrances, `keyframes` for multi-move paths, `<Camera>` to push in, `<Cursor>` to click, `<TypedText>` to type code, `<Connector>`/`<Packet>` for arrows and requests in flight, `<Flight>` for a line of code moving from one card into another, `<Headline>` for a title and sub that change per stop (and carry across pages with a morph), `<RollText>` for any other line that changes per stop. `references/motion.md` lists each one and its gotchas.
+
+In present mode the framework shows a small pill in the bottom-right corner with one dot per `→` left on the page, so the speaker can see how many beats remain. Don't draw your own.
+
 ## Page transitions
 
 The framework can run an enter/exit animation between slide changes, declared as a `SlideTransition` (module-level default, per-page override; the **incoming page wins**). There's **no default** — pages snap unless you opt in, and snap-swap is a perfectly tasteful default. If you do opt in: one motion DNA per deck, 200–280 ms, magnitude under 12 px / 3% scale, the outgoing page holds while the incoming page fades in on top (the framework ignores exit opacity unless `throughBackground: true`).
@@ -365,6 +377,8 @@ After writing or editing a page, look at it — the vertical-budget math catches
 
 Then view the image and fix what you see. The preview hot-reloads like the editor, and it never moves the user's cursor in `current.json`.
 
+5. **Check for overflow** on the same preview tab: pass the function in `scripts/overflow-check.js` (next to this file) to your browser tool's evaluate call. It returns every visible piece of text that sticks out of the 1920×1080 canvas, in canvas pixels; the expected result is `[]`. Entries marked `camera: true` sit inside a `<Camera>` and may be an intended crop — judge those on the screenshot. On a `useTimeline` page, run it at every stop (`&step=0`, `&step=1`, …): text that fits at the last stop can still overflow mid-page.
+
 ## Self-review before finishing
 
 - [ ] `slides/<id>/index.tsx` `export default`s a non-empty `Page[]`.
@@ -379,10 +393,12 @@ Then view the image and fix what you see. The preview hot-reloads like the edito
 - [ ] All imported assets exist on disk — slide-local under `slides/<id>/assets/`, or global under `assets/` (imported via `@assets/...`).
 - [ ] Every `<ImagePlaceholder>` corresponds to a real image the user must supply — not decorative filler. If it could be replaced by typography or layout, it should be.
 - [ ] If a page uses `<Steps>`/`<Step>`, every `<Step>` is a direct child of a `<Steps>`, and the page still reads as complete when jumped to via the overview grid (entering forward builds up; jumping in shows it fully revealed).
+- [ ] If a page uses `useTimeline`, it is called once per page, the page has no `<Steps>`, every animated style derives from `t` (no timers or CSS keyframes alongside), and the last stop reads as a complete slide.
+- [ ] Timeline motion uses the kit from `@open-slide/core` (`ramp`, `keyframes`, `Camera`, `Connector`, `Packet`, `Cursor`, `TypedText`, `RollText`) instead of re-implemented helpers; no `MorphElement` sits inside a `<Camera>`; you previewed every stop with `?step=n`.
 - [ ] If a `SlideTransition` is declared, every page sits in one family — same duration band (200–280 ms), same easing pair, same hold-then-fade-in shape (no enter delay, no `throughBackground` outside a deliberate section break), magnitude under 12 px / 3%. No six-different-vocabularies decks. When in doubt, omit transitions entirely. (Pages that opt into `morph` may exceed the band to match the morph — see `references/morph.md`.)
 - [ ] If a transition opts into `morph`: every morph `id` is unique per page and stable across the pair, morph geometry is pixel-constant (never measured after mount), no `transform` sits on the morph node, and entrance animations are gated behind `useIsActivePage()`.
 - [ ] If the user asked for a speech script / speaker notes, it lives in `export const notes` (index-aligned with the page array) — not in a markdown or text file.
-- [ ] If the dev server is running, you previewed every page you touched (see **Previewing a page visually**) and fixed what looked off.
+- [ ] If the dev server is running, you previewed every page you touched (see **Previewing a page visually**), `scripts/overflow-check.js` returned `[]` on each (at every stop of a timeline page), and you fixed what looked off.
 - [ ] Nothing outside `slides/<id>/` was edited.
 
 ## Anti-patterns

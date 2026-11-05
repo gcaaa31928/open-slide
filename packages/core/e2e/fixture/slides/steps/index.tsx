@@ -1,4 +1,4 @@
-import { type Page, type SlideMeta, Step, Steps } from '@open-slide/core';
+import { type Page, type SlideMeta, Step, Steps, useTimeline } from '@open-slide/core';
 
 export const meta: SlideMeta = {
   title: 'Steps Deck',
@@ -40,4 +40,22 @@ const Three: Page = () => (
   </div>
 );
 
-export default [One, Two, Three] satisfies Page[];
+const Four: Page = () => {
+  const { t, stop, playing } = useTimeline([1, 2, 3]);
+  return (
+    <div style={fill}>
+      <h1 style={{ fontSize: 96, margin: 0 }}>Timeline page four</h1>
+      <p
+        data-testid="timeline-state"
+        data-t={t.toFixed(2)}
+        data-stop={stop}
+        data-playing={playing}
+        style={{ fontSize: 40, opacity: Math.min(1, t / 3) }}
+      >
+        Timeline at {t.toFixed(2)}s
+      </p>
+    </div>
+  );
+};
+
+export default [One, Two, Three, Four] satisfies Page[];

@@ -179,6 +179,10 @@ export const ja: Locale = {
     exitAria: '終了 (Esc)',
     elapsedTime: '経過時間',
     lastSlideHint: '最後のスライドです · Esc で終了',
+    stepsRemaining: {
+      one: 'このスライドの残りアニメーション {count} 件',
+      other: 'このスライドの残りアニメーション {count} 件',
+    },
     helpEyebrow: '発表モード',
     helpTitle: 'キーボードショートカット',
     shortcutNext: '次のスライド',

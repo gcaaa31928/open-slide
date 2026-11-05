@@ -26,12 +26,14 @@ export type StepController = {
 export type StepAggregate = {
   revealed: number;
   stepCount: number;
+  playing: boolean;
 };
 
 type Registration = {
   id: object;
   stepCount: number;
   initialRevealed: number;
+  initialPlaying: boolean;
   controller: StepController;
   setRevealed: (n: number) => void;
 };
@@ -39,6 +41,7 @@ type Registration = {
 type StepHostContextValue = {
   register: (reg: Registration) => () => void;
   reportRevealed: (id: object, revealed: number) => void;
+  reportPlaying: (id: object, playing: boolean) => void;
   entryDirection: EntryDirection;
   controlled: boolean;
   isActivePage: boolean;
@@ -72,7 +75,7 @@ export function StepHost({
   onAggregateChange,
   children,
 }: StepHostProps) {
-  type Tracked = Registration & { revealed: number };
+  type Tracked = Registration & { revealed: number; playing: boolean };
   const registrationsRef = useRef<Tracked[]>([]);
 
   const onAggregateChangeRef = useRef(onAggregateChange);
@@ -114,11 +117,13 @@ export function StepHost({
     if (!cb) return;
     let revealed = 0;
     let stepCount = 0;
+    let playing = false;
     for (const r of registrationsRef.current) {
       revealed += r.revealed;
       stepCount += r.stepCount;
+      playing ||= r.playing;
     }
-    cb({ revealed, stepCount });
+    cb({ revealed, stepCount, playing });
   }, []);
 
   const distributeControlled = useCallback(() => {
@@ -144,7 +149,11 @@ export function StepHost({
   const value = useMemo<StepHostContextValue>(
     () => ({
       register: (reg) => {
-        const tracked: Tracked = { ...reg, revealed: reg.initialRevealed };
+        const tracked: Tracked = {
+          ...reg,
+          revealed: reg.initialRevealed,
+          playing: reg.initialPlaying,
+        };
         registrationsRef.current.push(tracked);
         if (controlledRevealedRef.current != null) {
           distributeControlled();
@@ -160,6 +169,12 @@ export function StepHost({
         const r = registrationsRef.current.find((x) => x.id === id);
         if (!r) return;
         r.revealed = revealed;
+        notifyAggregate();
+      },
+      reportPlaying: (id, playing) => {
+        const r = registrationsRef.current.find((x) => x.id === id);
+        if (!r || r.playing === playing) return;
+        r.playing = playing;
         notifyAggregate();
       },
       entryDirection,
@@ -178,12 +193,17 @@ export function useIsActivePage(): boolean {
   return useContext(StepHostContext)?.isActivePage ?? false;
 }
 
-export type StepsProps = PropsWithChildren;
+export type StepBlock = {
+  revealed: number;
+  hosted: boolean;
+  controlled: boolean;
+  isActivePage: boolean;
+  entryDirection: EntryDirection;
+  reportPlaying: (playing: boolean) => void;
+};
 
-export function Steps({ children }: StepsProps) {
+export function useStepBlock(stepCount: number): StepBlock {
   const host = useContext(StepHostContext);
-  const flat = Children.toArray(children);
-  const stepCount = flat.filter((c) => isValidElement(c) && c.type === Step).length;
 
   // Controlled mode waits for the host to assign a slice in the registration
   // layout-effect; otherwise the entry direction picks the initial reveal.
@@ -192,6 +212,9 @@ export function Steps({ children }: StepsProps) {
   const [revealed, setRevealed] = useState(initial);
 
   const idRef = useRef<object>({});
+  const playingRef = useRef(false);
+  const hostRef = useRef(host);
+  hostRef.current = host;
 
   const applyRevealed = useCallback((n: number) => {
     revealedRef.current = n;
@@ -219,12 +242,35 @@ export function Steps({ children }: StepsProps) {
       id,
       stepCount,
       initialRevealed: revealedRef.current,
+      initialPlaying: playingRef.current,
       controller: ctrl,
       setRevealed: applyRevealed,
     });
   }, [host, stepCount, applyRevealed]);
 
-  const effectiveRevealed = host ? revealed : stepCount;
+  // Registration re-runs whenever the host context changes, so the flag lives
+  // in a ref and is replayed as initialPlaying instead of only being reported.
+  const reportPlaying = useCallback((playing: boolean) => {
+    playingRef.current = playing;
+    hostRef.current?.reportPlaying(idRef.current, playing);
+  }, []);
+
+  return {
+    revealed: host ? revealed : stepCount,
+    hosted: host != null,
+    controlled: host?.controlled ?? false,
+    isActivePage: host?.isActivePage ?? false,
+    entryDirection: host?.entryDirection ?? 'jump',
+    reportPlaying,
+  };
+}
+
+export type StepsProps = PropsWithChildren;
+
+export function Steps({ children }: StepsProps) {
+  const flat = Children.toArray(children);
+  const stepCount = flat.filter((c) => isValidElement(c) && c.type === Step).length;
+  const { revealed: effectiveRevealed } = useStepBlock(stepCount);
 
   let stepIdx = 0;
   return (

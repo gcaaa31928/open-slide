@@ -139,6 +139,13 @@ test.describe('slide viewer', () => {
     await expect(editorCanvas(page).locator('[data-osd-step="pending"]')).toHaveCount(0);
   });
 
+  test('timelines render at their last stop in the editor', async ({ page }) => {
+    await openSlide(page, 'steps', '?p=4');
+    const state = editorCanvas(page).getByTestId('timeline-state');
+    await expect(state).toHaveAttribute('data-stop', '2');
+    await expect(state).toHaveAttribute('data-t', '3.00');
+  });
+
   test('thumbnail context menu duplicates and deletes a page', async ({ page, request }) => {
     try {
       await duplicateSlide(request, 'alpha', 'thumb-ops');
