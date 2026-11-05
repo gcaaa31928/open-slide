@@ -9,6 +9,7 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   release:
     name: Release
+    if: github.repository == 'open-slide/open-slide'
     runs-on: ubuntu-latest
     permissions:
       contents: write
