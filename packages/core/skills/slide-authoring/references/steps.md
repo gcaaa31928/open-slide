@@ -33,6 +33,7 @@ import { Step, Steps } from '@open-slide/core';
   <div style={COL}><Steps><Step>…</Step><Step>…</Step></Steps></div>{/* then this */}
   ```
 - **Entry direction decides the starting state — same content, two rhythms.** Entering forward (`→` from the previous page) starts empty and builds up. Jumping in via the overview grid, or arriving backward from a later page, shows the page **fully composed** with every step already revealed. Design the page to read well both ways: a thumbnail or overview jump should look complete, not blank.
+- **`<Steps dim>` dims every revealed step except the latest**, so the room's eyes stay on the point being made (Keynote's build-out dim). Pass a number for the opacity (`dim={0.4}`, default `0.35`). It applies wherever the page is presented — present mode, the editor, previews — and **not** in thumbnails, the overview grid or exports, which show every step at full strength as a summary of the page. Use it on lists the speaker talks through one item at a time; skip it when the items build into one picture the audience should see whole.
 - **`<Step>` fades in over `duration` ms (default 180).** Pass `<Step duration={...}>` to adjust. `prefers-reduced-motion: reduce` collapses it to an instant cut automatically — don't write a fallback.
 
 ## When to reach for it

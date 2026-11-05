@@ -55,7 +55,7 @@ Because so many surfaces show the last stop, **the page at its last stop must re
 - **One timeline per page, and no `<Steps>` on the same page.** A `<Steps>` block registers before the page's timeline, so `→` would reveal its steps first and the timeline second — rarely what you meant. Put every beat on the timeline instead.
 - **Keep segments short.** 0.4–1.2 s per movement; park within ~2 s of a press. The speaker is waiting on the animation.
 - **Animate `transform` and `opacity`.** Re-rendering every frame is fine; layout-changing properties (`width`, `top`, `font-size`) on large trees are not.
-- **Use the motion kit before writing your own.** `ramp`, `progress`, `keyframes`, `phaseAt`, `<Connector>`, `<Packet>`, `<Camera>`, `<Cursor>`, `<TypedText>` and `<RollText>` all come from `@open-slide/core` and are pure functions of `t`. See `motion.md`.
+- **Use the motion kit before writing your own.** `ramp`, `progress`, `keyframes`, `phaseAt`, `pulse`, `<Connector>`, `<Packet>`, `<Flight>`, `<Camera>`, `<Cursor>`, `<TypedText>`, `<Headline>`, `<RollText>`, `<CodeMove>`, `<Mark>` and `<CountUp>` all come from `@open-slide/core` and are pure functions of `t`. See `motion.md`.
 - **Leave a beat after the last move.** Put each stop 0.2–0.4 s after the last movement of its segment ends, so the page has settled when it parks.
 - **Mark mock UI as a mock.** A fake app window, chat, or terminal gets a small "示意 / mock" label on screen and in the notes.
 - **Plan stops around what the speaker says.** Each stop is a sentence: "Here's the request —" (→) "— it hits the cache —" (→) "— and misses."

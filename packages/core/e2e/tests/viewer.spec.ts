@@ -137,6 +137,7 @@ test.describe('slide viewer', () => {
     await openSlide(page, 'steps', '?p=2');
     await expect(editorCanvas(page).locator('[data-osd-step="revealed"]')).toHaveCount(2);
     await expect(editorCanvas(page).locator('[data-osd-step="pending"]')).toHaveCount(0);
+    await expect(editorCanvas(page).locator('[data-osd-step-dimmed]')).toHaveCount(1);
   });
 
   test('timelines render at their last stop in the editor', async ({ page }) => {

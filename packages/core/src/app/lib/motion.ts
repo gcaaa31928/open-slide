@@ -141,3 +141,28 @@ export function typedChars(t: number, start: number, total: number, cps = TYPING
 export function typingDuration(text: string | readonly TextSegment[], cps = TYPING_CPS): number {
   return charCount(text) / cps;
 }
+
+// Position and heading (degrees, 0 = pointing right) a fraction k of the way
+// along a polyline, by distance rather than by segment count.
+export function along(points: readonly Point[], k: number): { point: Point; angle: number } {
+  if (points.length === 0) throw new Error('along() needs at least one point.');
+  if (points.length === 1) return { point: points[0], angle: 0 };
+  const lengths = points
+    .slice(1)
+    .map((p, i) => Math.hypot(p[0] - points[i][0], p[1] - points[i][1]));
+  const total = lengths.reduce((a, b) => a + b, 0);
+  let left = clamp01(k) * total;
+  for (let i = 0; i < lengths.length; i++) {
+    if (left <= lengths[i] || i === lengths.length - 1) {
+      const a = points[i];
+      const b = points[i + 1];
+      const u = lengths[i] === 0 ? 1 : Math.min(1, left / lengths[i]);
+      return {
+        point: [lerp(a[0], b[0], u), lerp(a[1], b[1], u)],
+        angle: (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI,
+      };
+    }
+    left -= lengths[i];
+  }
+  return { point: points[points.length - 1], angle: 0 };
+}

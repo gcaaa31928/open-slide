@@ -4,8 +4,8 @@ Everything here is a pure function of the timeline's `t` (seconds). Pass `t` in;
 
 ```tsx
 import {
-  Camera, Connector, Cursor, Flight, Headline, Packet, RollText, TypedText,
-  keyframes, phaseAt, progress, pulse, ramp, lerp, easeInOut, easeOut, expoOut, overshoot, spring,
+  Camera, CodeMove, Connector, CountUp, Cursor, Flight, Headline, Mark, Packet, RollText, TypedText,
+  along, keyframes, phaseAt, progress, pulse, ramp, lerp, easeInOut, easeOut, expoOut, overshoot, spring,
   zoomDuration, defocus,
   useTimeline, type Page, type Point,
 } from '@open-slide/core';
@@ -26,6 +26,7 @@ import {
 | `lerp(a, b, k)` | `a + (b - a) * k` | turn a 0→1 value into pixels, scale, colour channels |
 | `keyframes(t, [[time, value], …], ease = easeInOut)` | the value at `t` | several moves of one thing: a camera path, a number that rises then falls. Values are numbers or flat `{ x, y, scale }` records. Holds the first value before the first key and the last after the last; repeat a key to hold |
 | `phaseAt(t, starts)` | index of the latest phase whose start `t` is **strictly** past | switching text or state per stop without flipping early when parked on a stop |
+| `along(points, k)` | `{ point, angle }` a fraction `k` of the way along a polyline, by distance; `angle` in degrees, 0 = pointing right | a marker travelling a multi-leg route and turning at each corner: `transform={`translate(${point[0]} ${point[1]}) rotate(${angle})`}`. Pair it with an SVG path drawn by `progress` so the line and the marker stay together |
 | `curvePoint(from, to, u)` / `curvePath(from, to)` | point / SVG `d` on the S-curve `Connector` and `Packet` use | putting your own label or marker on a connector |
 | `typingDuration(text, cps = 30)` | seconds a `TypedText` line takes | scheduling the next stop after a line finishes |
 
@@ -40,6 +41,9 @@ All of these position themselves in canvas pixels (1920×1080) with `position: a
 - **`<Cursor t path={[[time, x, y], …]} clicks={[time, …]} visible={0..1} color? />`** — a fake pointer that waits at the first waypoint, arcs between waypoints, and shows a press + ripple for 0.5 s at each click time. Aim waypoints a few pixels inside the target, and fade `visible` out before the camera moves.
 - **`<TypedText t at text cps={30} caret? />`** — types `text` (a string, or `[text, color?][]` segments for syntax colours) one code point per tick, with a caret only while typing. Inherits font and colour from its parent, so wrap it in your code-panel styling. Start each line after the stop before it, or a page parked on that stop shows half a line.
 - **`<Headline t at={[0, 2.6, 5.6]} titles={[…]} subs={[…]} titleHeight={120} subHeight={48} morphId? style? titleStyle? subStyle? />`** — the page's title and its one-line sub, changing per stop: the old title exits upward while the new one rises into its box, and the sub follows 0.1 s later with a short lift. The first title stands still (no entrance roll), so a page can be cut to with `morphId` and the box carries over from the previous page. For that continuity, make each chapter page's **first** title the previous page's **last** title, give every chapter page the same `morphId` and the same morph transition (forward and backward), and keep the `<Headline>` outside any `<Camera>`. Position it with `style`; never put a `transform` on it.
+- **`<CodeMove t at={[0, 2, 4]} steps={[codeA, codeB, codeC]} highlight={[undefined, '2-3', '5']} fontSize={32} lineHeight={1.5} dim={0.28} duration={0.8} fontFamily? colors? style? />`** — a code block that changes per stop the way Keynote's Magic Move matches by character: tokens that survive stay put or slide to their new place (a moved line flies to its new row), removed ones fade out, new ones fade in. `highlight` takes one 1-based line spec per step (`'1,3-5'`; `undefined` lights every line) and dims the rest to `dim`, so passing the same code to every step gives a pure "walk through it line by line" block. It colours keywords, strings, numbers and comments from `var(--osd-accent)`; override with `colors`. Code is laid out from the font's measured advance, so pass a monospace `fontFamily` (CJK in comments and strings is fine). Its height follows the current step's line count; pin it with `style={{ height: '13.5em' }}` when the panel around it should not grow. One change per stop, and keep each diff small enough to follow — a rewrite of the whole block reads as a cross-fade.
+- **`<Mark t at type="underline" | "circle" | "box" | "highlight" | "strike" duration={0.6} color? width={4} style?>text</Mark>`** — a hand-drawn mark (two slightly offset strokes, highlighter behind the text) that draws itself over `duration`. Inline: wrap the words inside a sentence. `circle` and `box` reach a little past the text, so give the `Mark` a few px of horizontal `margin` when neighbours sit close. Draw one mark per stop, at the moment the speaker says the word.
+- **`<CountUp t at to from={0} duration={1.2} decimals={0} format? style? />`** — a number easing from `from` to `to` with tabular figures, so the width doesn't jitter. Use `format` for thousands separators or units.
 - **`<RollText t at={[0, 2.6, 5.6]} lines={[…]} height={92} style? />`** — a title that rolls up to the next line at each start, split-flap style. Uses `phaseAt`, so a page parked exactly on `2.6` still shows the first line. Give it the title's typography through `style` and an explicit `height` (one line).
 
 ## Pacing

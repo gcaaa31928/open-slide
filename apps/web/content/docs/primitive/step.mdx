@@ -48,6 +48,22 @@ const Problem: Page = () => (
 </Steps>
 ```
 
+## Dimming earlier steps
+
+`<Steps dim>` dims every revealed step except the latest, so the audience
+looks at the point being made. Pass a number to set the opacity; the default
+is `0.35`.
+
+```tsx
+<Steps dim>
+  <Step>What does it help the audience see?</Step>
+  <Step>Does the page still work without it?</Step>
+  <Step>Does it appear exactly when you say it?</Step>
+</Steps>
+```
+
+Thumbnails, the overview grid and exports show every step at full strength.
+
 ## Entry state
 
 The starting state depends on how the audience lands on the page:

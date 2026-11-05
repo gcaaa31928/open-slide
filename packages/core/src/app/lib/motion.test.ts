@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  along,
   charCount,
   curvePath,
   curvePoint,
@@ -168,5 +169,23 @@ describe('pulse', () => {
     expect(pulse(1.4, 1)).toBe(1);
     expect(pulse(1.8, 1)).toBe(0);
     expect(pulse(9, 1)).toBe(0);
+  });
+});
+
+describe('along', () => {
+  const path = [
+    [0, 0],
+    [100, 0],
+    [100, 100],
+  ] as const;
+
+  it('walks by distance and reports the heading of the current leg', () => {
+    expect(along(path, 0.25)).toEqual({ point: [50, 0], angle: 0 });
+    expect(along(path, 0.75)).toEqual({ point: [100, 50], angle: 90 });
+  });
+
+  it('clamps outside 0..1', () => {
+    expect(along(path, -1).point).toEqual([0, 0]);
+    expect(along(path, 2).point).toEqual([100, 100]);
   });
 });

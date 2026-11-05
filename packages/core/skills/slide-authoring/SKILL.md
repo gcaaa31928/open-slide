@@ -1,6 +1,6 @@
 ---
 name: slide-authoring
-description: Technical reference for writing or editing open-slide pages — file contract, 1920×1080 canvas, type scale, layout, palette/visual direction, assets, speaker notes, stepped reveals, page transitions, and morph transitions. Consult this whenever you are about to write or modify any file under `slides/<id>/`, including from inside the `create-slide` or `apply-comments` workflows, or for any ad-hoc slide edit. Triggers on phrases like "edit slide", "tweak this page", "fix the layout", "change the palette", "reveal one by one", "add a transition", "morph transition", "write the speaker notes", "generate the script / talk track", "preview / screenshot a page", "check how it looks", "investigate the slide framework", "how do slides work here".
+description: Technical reference for writing or editing open-slide pages — file contract, 1920×1080 canvas, type scale, layout, palette/visual direction, assets, speaker notes, stepped reveals, page transitions, and morph transitions. Consult this whenever you are about to write or modify any file under `slides/<id>/`, including from inside the `create-slide` or `apply-comments` workflows, or for any ad-hoc slide edit. Triggers on phrases like "edit slide", "tweak this page", "fix the layout", "change the palette", "reveal one by one", "animate inside the page", "timeline animation", "camera push / zoom in", "type out the code", "show the request flowing", "title rolls to the next one", "like Keynote / Magic Move", "add a transition", "morph transition", "write the speaker notes", "generate the script / talk track", "preview / screenshot a page", "check how it looks", "investigate the slide framework", "how do slides work here".
 ---
 
 # Authoring open-slide pages
@@ -26,7 +26,7 @@ Each framework primitive has a full reference file under `references/` in this s
 | `useSlidePageNumber()` | rendering a page-number footer | `references/page-numbers.md` |
 | `<Steps>` / `<Step>` | staging a page's reveal | `references/steps.md` |
 | `useTimeline()` | animating motion inside a page, played one `→` at a time | `references/timeline.md` |
-| Motion kit (`ramp`, `keyframes`, `pulse`, `Camera`, `Connector`, `Packet`, `Flight`, `Headline`, `Cursor`, `TypedText`, `RollText`) | building anything that moves on a `useTimeline` page | `references/motion.md` |
+| Motion kit (`ramp`, `keyframes`, `pulse`, `along`, `Camera`, `Connector`, `Packet`, `Flight`, `Headline`, `Cursor`, `TypedText`, `RollText`, `CodeMove`, `Mark`, `CountUp`) | building anything that moves on a `useTimeline` page | `references/motion.md` |
 | `SlideTransition` | declaring any enter/exit animation | `references/transitions.md` |
 | `MorphElement` + `morph` | morphing a shared element across pages | `references/morph.md` |
 
@@ -272,7 +272,7 @@ If a footer shows the current page (`03 / 12`), read it from `useSlidePageNumber
 
 Reveal a page one beat at a time: wrap deferred parts in `<Step>`, the group in `<Steps>`; each `→` reveals the next step. Use it when the *order* of ideas is the point — not reflexively on every page. Two rules are load-bearing: `<Step>` must be a **direct child** of `<Steps>` (otherwise it silently renders fully revealed), and a page must still read as complete when jumped to via the overview grid (jumping in shows all steps revealed).
 
-Read `references/steps.md` before authoring a stepped page — it covers composition order across multiple `<Steps>` blocks, the "headline always, body in turn" pattern, and entry-direction behavior. If `slides/build-on-reveal/` exists in this project, it is the canonical worked example.
+Read `references/steps.md` before authoring a stepped page — it covers composition order across multiple `<Steps>` blocks, the "headline always, body in turn" pattern, `<Steps dim>` for dimming the points already made, and entry-direction behavior. If `slides/build-on-reveal/` exists in this project, it is the canonical worked example.
 
 ## In-page timelines (`useTimeline`)
 
@@ -280,7 +280,7 @@ When things should *move* inside a page — a camera push, a cursor travelling t
 
 Read `references/timeline.md` before writing one — it has the contract, where `t` lands on each surface (present, preview `?step=`, presenter, thumbnails, reduced motion), and the anti-pattern list.
 
-Build the motion from the kit in `@open-slide/core` rather than hand-rolled helpers: `ramp(t, at)` for entrances, `keyframes` for multi-move paths, `<Camera>` to push in, `<Cursor>` to click, `<TypedText>` to type code, `<Connector>`/`<Packet>` for arrows and requests in flight, `<Flight>` for a line of code moving from one card into another, `<Headline>` for a title and sub that change per stop (and carry across pages with a morph), `<RollText>` for any other line that changes per stop. `references/motion.md` lists each one and its gotchas.
+Build the motion from the kit in `@open-slide/core` rather than hand-rolled helpers: `ramp(t, at)` for entrances, `keyframes` for multi-move paths, `<Camera>` to push in, `<Cursor>` to click, `<TypedText>` to type code, `<Connector>`/`<Packet>` for arrows and requests in flight, `<Flight>` for a line of code moving from one card into another, `<Headline>` for a title and sub that change per stop (and carry across pages with a morph), `<RollText>` for any other line that changes per stop, `<CodeMove>` for code that changes or is walked through line by line, `<Mark>` to underline, circle or highlight the word being said, `<CountUp>` for numbers. `references/motion.md` lists each one and its gotchas.
 
 In present mode the framework shows a small pill in the bottom-right corner with one dot per `→` left on the page, so the speaker can see how many beats remain. Don't draw your own.
 
@@ -394,7 +394,7 @@ Then view the image and fix what you see. The preview hot-reloads like the edito
 - [ ] Every `<ImagePlaceholder>` corresponds to a real image the user must supply — not decorative filler. If it could be replaced by typography or layout, it should be.
 - [ ] If a page uses `<Steps>`/`<Step>`, every `<Step>` is a direct child of a `<Steps>`, and the page still reads as complete when jumped to via the overview grid (entering forward builds up; jumping in shows it fully revealed).
 - [ ] If a page uses `useTimeline`, it is called once per page, the page has no `<Steps>`, every animated style derives from `t` (no timers or CSS keyframes alongside), and the last stop reads as a complete slide.
-- [ ] Timeline motion uses the kit from `@open-slide/core` (`ramp`, `keyframes`, `Camera`, `Connector`, `Packet`, `Cursor`, `TypedText`, `RollText`) instead of re-implemented helpers; no `MorphElement` sits inside a `<Camera>`; you previewed every stop with `?step=n`.
+- [ ] Timeline motion uses the kit from `@open-slide/core` (`ramp`, `keyframes`, `Camera`, `Connector`, `Packet`, `Cursor`, `TypedText`, `RollText`, `CodeMove`, `Mark`, `CountUp`, …) instead of re-implemented helpers; no `MorphElement` sits inside a `<Camera>`; you previewed every stop with `?step=n`.
 - [ ] If a `SlideTransition` is declared, every page sits in one family — same duration band (200–280 ms), same easing pair, same hold-then-fade-in shape (no enter delay, no `throughBackground` outside a deliberate section break), magnitude under 12 px / 3%. No six-different-vocabularies decks. When in doubt, omit transitions entirely. (Pages that opt into `morph` may exceed the band to match the morph — see `references/morph.md`.)
 - [ ] If a transition opts into `morph`: every morph `id` is unique per page and stable across the pair, morph geometry is pixel-constant (never measured after mount), no `transform` sits on the morph node, and entrance animations are gated behind `useIsActivePage()`.
 - [ ] If the user asked for a speech script / speaker notes, it lives in `export const notes` (index-aligned with the page array) — not in a markdown or text file.

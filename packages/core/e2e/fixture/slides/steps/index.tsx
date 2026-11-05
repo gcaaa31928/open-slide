@@ -23,7 +23,7 @@ const One: Page = () => (
 const Two: Page = () => (
   <div style={fill}>
     <h1 style={{ fontSize: 96, margin: 0 }}>Steps page two</h1>
-    <Steps>
+    <Steps dim>
       <Step>
         <p style={{ fontSize: 40 }}>Step item first</p>
       </Step>

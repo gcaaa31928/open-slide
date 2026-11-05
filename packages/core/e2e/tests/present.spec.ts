@@ -38,9 +38,12 @@ test.describe('present mode', () => {
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('[data-osd-step="revealed"]')).toHaveCount(1);
     await expect(indicator).toHaveAttribute('data-remaining', '1');
+    await expect(page.locator('[data-osd-step-dimmed]')).toHaveCount(0);
     await page.keyboard.press('ArrowRight');
     await expect(page.locator('[data-osd-step="revealed"]')).toHaveCount(2);
     await expect(indicator).toHaveCount(0);
+    // <Steps dim>: only the latest step stays at full strength.
+    await expect(page.locator('[data-osd-step-dimmed]')).toHaveText('Step item first');
 
     await page.keyboard.press('ArrowRight');
     await expect(page).toHaveURL(/[?&]p=3/);

@@ -265,12 +265,20 @@ export function useStepBlock(stepCount: number): StepBlock {
   };
 }
 
-export type StepsProps = PropsWithChildren;
+export type StepsProps = PropsWithChildren<{
+  dim?: boolean | number;
+}>;
 
-export function Steps({ children }: StepsProps) {
+const DEFAULT_DIM = 0.35;
+
+export function Steps({ children, dim }: StepsProps) {
   const flat = Children.toArray(children);
   const stepCount = flat.filter((c) => isValidElement(c) && c.type === Step).length;
-  const { revealed: effectiveRevealed } = useStepBlock(stepCount);
+  const { revealed: effectiveRevealed, hosted } = useStepBlock(stepCount);
+  // Thumbnails, the overview grid and exports summarise the page, so they show
+  // every step at full strength; only a hosted page has a "current" step.
+  const dimTo =
+    !hosted || dim === undefined || dim === false ? 1 : dim === true ? DEFAULT_DIM : dim;
 
   let stepIdx = 0;
   return (
@@ -278,9 +286,10 @@ export function Steps({ children }: StepsProps) {
       {flat.map((child, key) => {
         if (isValidElement(child) && child.type === Step) {
           const idx = stepIdx++;
-          return cloneElement(child as ReactElement<{ _revealed?: boolean }>, {
+          return cloneElement(child as ReactElement<{ _revealed?: boolean; _dimTo?: number }>, {
             key: child.key ?? key,
             _revealed: idx < effectiveRevealed,
+            _dimTo: idx < effectiveRevealed - 1 ? dimTo : 1,
           });
         }
         return child;
@@ -293,9 +302,9 @@ export type StepProps = PropsWithChildren<{
   duration?: number;
 }>;
 
-type InternalStepProps = StepProps & { _revealed?: boolean };
+type InternalStepProps = StepProps & { _revealed?: boolean; _dimTo?: number };
 
-export function Step({ children, duration = 180, _revealed }: InternalStepProps) {
+export function Step({ children, duration = 180, _revealed, _dimTo = 1 }: InternalStepProps) {
   const reduceMotion = usePrefersReducedMotion();
   const revealed = _revealed ?? true;
   const ms = reduceMotion ? 0 : duration;
@@ -303,8 +312,9 @@ export function Step({ children, duration = 180, _revealed }: InternalStepProps)
   return (
     <div
       data-osd-step={revealed ? 'revealed' : 'pending'}
+      data-osd-step-dimmed={revealed && _dimTo < 1 ? '' : undefined}
       style={{
-        opacity: revealed ? 1 : 0,
+        opacity: revealed ? _dimTo : 0,
         visibility: revealed ? 'visible' : 'hidden',
         transition: `opacity ${ms}ms cubic-bezier(0, 0, 0.2, 1)`,
       }}
