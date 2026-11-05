@@ -42,6 +42,7 @@ Path is relative to the project root (the user's `cwd`, the directory that conta
     "tagName": "h1",
     "text": "Q2 Roadmap"
   },
+  "step": { "revealed": 1, "count": 3 },
   "updatedAt": "2026-05-09T14:32:11.123Z"
 }
 ```
@@ -56,7 +57,11 @@ Path is relative to the project root (the user's `cwd`, the directory that conta
   - `tagName` is the rendered DOM tag, lowercased (`"h1"`, `"div"`, `"img"`).
   - `text` is a trimmed text snippet (≤120 chars) from the element's `textContent`, useful as a sanity check that you're looking at the right node.
   - Selection auto-clears whenever the user navigates to a different slide or page.
-- `updatedAt` — ISO timestamp of the last navigation or selection change. Use it to detect staleness.
+- `step` — where the user is parked on an animated page while **presenting**; `null` otherwise. `null` means they see the page as the editor shows it: every `<Step>` revealed and every `useTimeline` at its last stop.
+  - `count` is how many `→` presses the page consumes; `revealed` is how many they have pressed. On a `<Steps>` page the first `revealed` steps are showing; on a `useTimeline` page the clock is parked at `stops[revealed]`.
+  - To see exactly what they see, open `s/<slideId>/preview?p=<pageNumber>&step=<revealed>`.
+  - Resets to `null` when they move to another page, leave present mode, or land on a page without steps.
+- `updatedAt` — ISO timestamp of the last navigation, selection or step change. Use it to detect staleness.
 
 ## When to use this
 
@@ -64,6 +69,16 @@ Path is relative to the project root (the user's `cwd`, the directory that conta
 - The user references a specific element: "this heading", "this image", "the button I just clicked", "tighten this", "change the color of this". If `selection` is non-null, that's the element they mean.
 - Before asking "which slide?" or "which element?" as a clarifying question — check this file first.
 - Before guessing from `git log`, recently-edited files, or the most recent slide folder.
+
+## "This animation" — use `step`
+
+While presenting, the user can't pick an element, so "this is too fast", "this part should come later" or "the arrow here" points at whatever moves at the current stop. With `step` non-null:
+
+1. Read the page in `pagePath` and find its `useTimeline(stops)` or `<Steps>`.
+2. The beat they mean is the one that **ends** at `stops[revealed]` (or the `revealed`-th `<Step>`): it's what just played when they pressed `→`. If `revealed` is `0`, it's the entrance that plays up to `stops[0]`.
+3. Change that beat's `at` / `duration` / stops, following the timeline rules in `slide-authoring`, then preview that stop with `&step=<revealed>` and the stops around it.
+
+If `step` is `null` they are in the editor and see the finished page; ask which beat they mean if the note is about timing.
 
 ## When NOT to use this
 

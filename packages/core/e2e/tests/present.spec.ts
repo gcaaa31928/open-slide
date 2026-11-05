@@ -1,5 +1,7 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { editorCanvas, enterPlayMode, openSlide } from './helpers.ts';
+import { devScratchDir, editorCanvas, enterPlayMode, openSlide } from './helpers.ts';
 
 test.describe('present mode', () => {
   test('windowed play mode navigates and exits back to the editor', async ({ page }) => {
@@ -126,6 +128,28 @@ test.describe('present mode', () => {
       expect(Number(await state.getAttribute('data-t'))).toBeGreaterThanOrEqual(1);
       await expect(state).toHaveAttribute('data-t', '2.00');
     });
+  });
+
+  test('current.json records the stop the presenter is parked on', async ({ page }) => {
+    const currentFile = path.join(devScratchDir, 'node_modules', '.open-slide', 'current.json');
+    const current = async () => JSON.parse(await fs.readFile(currentFile, 'utf8'));
+
+    await openSlide(page, 'steps', '?p=2');
+    await expect.poll(async () => (await current()).step).toBeNull();
+    await enterPlayMode(page);
+    await expect.poll(async () => (await current()).step).toEqual({ revealed: 2, count: 2 });
+
+    await page.keyboard.press('ArrowLeft');
+    await expect.poll(async () => (await current()).step).toEqual({ revealed: 1, count: 2 });
+
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowRight');
+    await expect(page).toHaveURL(/[?&]p=3/);
+    await expect.poll(async () => current()).toMatchObject({ pageNumber: 3, step: null });
+
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('ArrowLeft');
+    await expect.poll(async () => current()).toMatchObject({ pageNumber: 2, step: null });
   });
 
   test('typing digits jumps to a page', async ({ page }) => {

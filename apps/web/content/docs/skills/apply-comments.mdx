@@ -35,6 +35,11 @@ After a batch of inspector comments — typically right before saving the
 deck for the day or right before a rehearsal. Refreshing the dev server
 after `/apply-comments` shows the new state with the markers cleared.
 
+On an animated page the editor shows the finished state, so a comment about
+looks applies to that. A comment about timing (*"too fast"*, *"should come
+later"*) changes the page's stops or steps instead, and the agent checks
+every stop afterwards, not just the last one.
+
 If a comment is ambiguous, the agent applies the smallest reasonable
 interpretation and notes the assumption in its summary. Comments it can't
 resolve at all are left in place and reported as skipped — refine the
