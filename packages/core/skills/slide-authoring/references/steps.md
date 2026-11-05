@@ -1,5 +1,7 @@
 # Stepped reveals (`<Steps>` / `<Step>`)
 
+> If things should *move* inside the page rather than appear in order, see `timeline.md`.
+
 Reveal a page one beat at a time instead of showing everything at once. Wrap the deferred parts in `<Step>`, wrap the group in `<Steps>`. Each `→` reveals the next `<Step>`; `→` after the last one advances to the next page. `←` peels the last reveal back. Use it to stage attention — show framing first, then the consequence, then the turn — so the audience reads at the speaker's pace, not ahead.
 
 If `slides/build-on-reveal/` exists in this project (the demo workspace ships it), study it before authoring a stepped page; otherwise the rules and snippets below are sufficient.
@@ -31,6 +33,7 @@ import { Step, Steps } from '@open-slide/core';
   <div style={COL}><Steps><Step>…</Step><Step>…</Step></Steps></div>{/* then this */}
   ```
 - **Entry direction decides the starting state — same content, two rhythms.** Entering forward (`→` from the previous page) starts empty and builds up. Jumping in via the overview grid, or arriving backward from a later page, shows the page **fully composed** with every step already revealed. Design the page to read well both ways: a thumbnail or overview jump should look complete, not blank.
+- **`<Steps dim>` dims every revealed step except the latest**, so the room's eyes stay on the point being made (Keynote's build-out dim). Pass a number for the opacity (`dim={0.4}`, default `0.35`). It applies wherever the page is presented — present mode, the editor, previews — and **not** in thumbnails, the overview grid or exports, which show every step at full strength as a summary of the page. Use it on lists the speaker talks through one item at a time; skip it when the items build into one picture the audience should see whole.
 - **`<Step>` fades in over `duration` ms (default 180).** Pass `<Step duration={...}>` to adjust. `prefers-reduced-motion: reduce` collapses it to an instant cut automatically — don't write a fallback.
 
 ## When to reach for it

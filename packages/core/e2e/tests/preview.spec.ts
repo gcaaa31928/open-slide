@@ -38,6 +38,20 @@ test.describe('page preview route', () => {
     await expect(page.getByText('Step item second')).toBeVisible();
   });
 
+  test('step param parks a timeline at that stop', async ({ page }) => {
+    const state = page.getByTestId('timeline-state');
+
+    await page.goto('/s/steps/preview?p=4&step=1');
+    await expect(preview(page)).toHaveAttribute('data-osd-preview', 'ready');
+    await expect(state).toHaveAttribute('data-stop', '1');
+    await expect(state).toHaveAttribute('data-t', '2.00');
+
+    await page.goto('/s/steps/preview?p=4');
+    await expect(preview(page)).toHaveAttribute('data-osd-preview', 'ready');
+    await expect(state).toHaveAttribute('data-stop', '2');
+    await expect(state).toHaveAttribute('data-t', '3.00');
+  });
+
   test('reports out-of-range pages and unknown slides', async ({ page }) => {
     await page.goto('/s/alpha/preview?p=9');
     await expect(preview(page)).toHaveAttribute('data-osd-preview', 'error');
