@@ -21,7 +21,12 @@ import {
   pickInspectorTarget,
 } from '@/lib/inspector/pick-target';
 import type { CommentRect, SlideComment } from '@/lib/inspector/use-comments';
-import { type Canvas, readCanvas, readFrame } from '@/lib/inspector/visual-dom';
+import {
+  type Canvas,
+  ONION_SKIN_SELECTOR,
+  readCanvas,
+  readFrame,
+} from '@/lib/inspector/visual-dom';
 import { IS_APPLE, isTypingTarget } from '@/lib/keys';
 import { format, plural, useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
@@ -105,6 +110,7 @@ function containerFor(rect: Rect, canvas: Canvas, slideId: string): SelectedTarg
   let largest: { target: SelectedTarget; area: number } | null = null;
   const seen = new Set<HTMLElement>();
   for (const element of canvas.root.querySelectorAll<HTMLElement>('[data-slide-loc]')) {
+    if (element.closest(ONION_SKIN_SELECTOR)) continue;
     const hit = findSlideSource(element, slideId, { hostOnly: true });
     if (!hit || seen.has(hit.anchor)) continue;
     seen.add(hit.anchor);

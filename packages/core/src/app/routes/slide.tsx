@@ -96,6 +96,7 @@ import {
 import { SlideCanvas } from '../components/slide-canvas';
 import { isDeckWarmed, markDeckWarmed, SlidePreloadLayer } from '../components/slide-preload-layer';
 import { SlideTransitionLayer } from '../components/slide-transition-layer';
+import { StepStrip } from '../components/step-strip';
 import { type ThumbnailActions, ThumbnailRail } from '../components/thumbnail-rail';
 import { exportSlideAsHtml } from '../lib/export-html';
 import { exportSlideAsPdf, isSafari, type PdfExportProgress } from '../lib/export-pdf';
@@ -106,6 +107,8 @@ import {
 } from '../lib/export-pptx';
 import { remapNotesSessionCacheAfterReorder } from '../lib/inspector/use-notes';
 import type { SlideModule } from '../lib/sdk';
+import type { StepAggregate } from '../lib/step-context';
+import { clampStop } from '../lib/step-strip';
 import { usePrefersReducedMotion } from '../lib/use-prefers-reduced-motion';
 import { useSlideModule } from '../lib/use-slide-module';
 
@@ -243,6 +246,47 @@ export function Slide() {
       : null;
   const stepRevealed = step?.revealed;
   const stepCount = step?.count;
+
+  // The editor parks an animated page at a stop; a page change drops the
+  // parking so the next page opens fully revealed as before.
+  const [parked, setParked] = useState<{ slideId: string; page: number; stop: number } | null>(
+    null,
+  );
+  const [onionSkin, setOnionSkin] = useState(false);
+  const [editSteps, setEditSteps] = useState<StepAggregate>({
+    revealed: 0,
+    stepCount: 0,
+    playing: false,
+    stops: null,
+  });
+  const handleEditSteps = useCallback((a: StepAggregate) => {
+    setEditSteps((cur) =>
+      cur.revealed === a.revealed && cur.stepCount === a.stepCount && cur.stops === a.stops
+        ? cur
+        : a,
+    );
+  }, []);
+  const editStop =
+    parked && parked.slideId === slideId && parked.page === index && editSteps.stepCount > 0
+      ? clampStop(parked.stop, editSteps.stepCount)
+      : null;
+  const parkAt = useCallback(
+    (stop: number) => {
+      if (!slideId || editSteps.stepCount === 0) return;
+      setParked({ slideId, page: index, stop: clampStop(stop, editSteps.stepCount) });
+    },
+    [slideId, index, editSteps.stepCount],
+  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a page change drops the parking
+  useEffect(() => {
+    setParked(null);
+  }, [slideId, index]);
+  // The ghost only exists while explicitly parked, so a page cut never
+  // carries a second copy of the page's morph targets and source locs.
+  const toggleOnionSkin = useCallback(() => {
+    if (!onionSkin && editStop === null) parkAt(editSteps.stepCount);
+    setOnionSkin(!onionSkin);
+  }, [onionSkin, editStop, parkAt, editSteps.stepCount]);
 
   useEffect(() => {
     if (!import.meta.hot) return;
@@ -429,6 +473,11 @@ export function Slide() {
       // Once overview owns focus, swallow everything else here — its
       // capture-phase listener drives the focused thumbnail.
       if (overviewOpen) return;
+      if (import.meta.env.DEV && (e.key === '.' || e.key === ',') && editSteps.stepCount > 0) {
+        e.preventDefault();
+        parkAt((editStop ?? editSteps.stepCount) + (e.key === '.' ? 1 : -1));
+        return;
+      }
       if (isForwardKey(e)) {
         e.preventDefault();
         goTo(index + 1);
@@ -454,7 +503,19 @@ export function Slide() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [index, goTo, playMode, curtain, slideId, overviewOpen, toggleAgent, present]);
+  }, [
+    index,
+    goTo,
+    playMode,
+    curtain,
+    slideId,
+    overviewOpen,
+    toggleAgent,
+    present,
+    editSteps.stepCount,
+    editStop,
+    parkAt,
+  ]);
 
   if (error) {
     return (
@@ -962,8 +1023,21 @@ export function Slide() {
                         total={pageCount}
                         moduleTransition={slide.transition}
                         disabled={prefersReducedMotion}
+                        controlledRevealed={editStop ?? undefined}
+                        onionSkin={onionSkin && editStop !== null}
+                        onStepAggregateChange={import.meta.env.DEV ? handleEditSteps : undefined}
                       />
                     </SlideCanvas>
+                    {import.meta.env.DEV && editSteps.stepCount > 0 && (
+                      <StepStrip
+                        count={editSteps.stepCount}
+                        stops={editSteps.stops}
+                        current={editStop ?? editSteps.stepCount}
+                        onionSkin={onionSkin}
+                        onSelect={parkAt}
+                        onToggleOnionSkin={toggleOnionSkin}
+                      />
+                    )}
                     <InspectOverlay />
                     <InlineEditLayer />
                     <SaveBar />

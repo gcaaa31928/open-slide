@@ -164,6 +164,13 @@ export const zhCN: Locale = {
     noDecksFound: '没有匹配的演示文稿',
   },
 
+  stepStrip: {
+    label: '停点',
+    stop: '停点',
+    prevAria: '上一个停点 (,)',
+    nextAria: '下一个停点 (.)',
+    onionSkinAria: '叠加上一格（洋葱皮）',
+  },
   present: {
     prevSlideAria: '上一张幻灯片 (←)',
     nextSlideAria: '下一张幻灯片 (→)',

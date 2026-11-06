@@ -18,7 +18,7 @@ export type Timeline = {
 
 export function useTimeline(stops: readonly number[]): Timeline {
   assertStops(stops);
-  const block = useStepBlock(stops.length - 1);
+  const block = useStepBlock(stops.length - 1, stops);
   const reduceMotion = usePrefersReducedMotion();
   const play = shouldPlayTimeline({ ...block, reduceMotion });
   const { stop, target } = timelineStop(stops, block.revealed);

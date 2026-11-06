@@ -24,9 +24,15 @@ type Props = {
   stepControllerRef?: MutableRefObject<StepController | null>;
   entryDirection?: EntryDirection;
   onStepAggregateChange?: (aggregate: StepAggregate) => void;
+  // Parks the current page at this stop instead of letting its steps play.
+  controlledRevealed?: number;
+  // Draws the stop before the parked one as a faint, inert layer on top.
+  onionSkin?: boolean;
 };
 
 type Direction = 'forward' | 'backward';
+
+const ONION_SKIN_OPACITY = 0.3;
 
 const DEFAULT_EASING = 'cubic-bezier(.4, 0, .2, 1)';
 const MORPH_ELEMENT_SELECTOR = '[data-osd-morph]';
@@ -645,6 +651,8 @@ export function SlideTransitionLayer({
   stepControllerRef,
   entryDirection = 'jump',
   onStepAggregateChange,
+  controlledRevealed,
+  onionSkin = false,
 }: Props) {
   const [current, setCurrent] = useState(index);
   const [outgoing, setOutgoing] = useState<number | null>(null);
@@ -815,7 +823,28 @@ export function SlideTransitionLayer({
               isActivePage
               entryDirection={entryDirection}
               controllerRef={activeControllerRef}
+              controlledRevealed={controlledRevealed}
               onAggregateChange={onStepAggregateChange}
+            >
+              <CurrentPage />
+            </StepHost>
+          </SlidePageProvider>
+        </div>
+      ) : null}
+      {CurrentPage && onionSkin && controlledRevealed !== undefined && controlledRevealed > 0 ? (
+        <div
+          aria-hidden="true"
+          inert
+          data-osd-onion-skin
+          className="pointer-events-none absolute inset-0"
+          style={{ opacity: ONION_SKIN_OPACITY }}
+        >
+          <SlidePageProvider index={current} total={total}>
+            <StepHost
+              isActivePage={false}
+              entryDirection="jump"
+              controllerRef={noopControllerRef}
+              controlledRevealed={controlledRevealed - 1}
             >
               <CurrentPage />
             </StepHost>

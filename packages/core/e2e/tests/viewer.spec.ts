@@ -147,6 +147,69 @@ test.describe('slide viewer', () => {
     await expect(state).toHaveAttribute('data-t', '3.00');
   });
 
+  test('the stop strip parks steps at an earlier stop', async ({ page }) => {
+    await openSlide(page, 'steps', '?p=2');
+    const canvas = editorCanvas(page);
+    await page.getByRole('button', { name: 'Stop 1', exact: true }).click();
+    await expect(canvas.locator('[data-osd-step="revealed"]')).toHaveCount(1);
+    await expect(canvas.locator('[data-osd-step="pending"]')).toHaveCount(1);
+    await expect(canvas.locator('[data-osd-step-dimmed]')).toHaveCount(0);
+
+    await page.keyboard.press('.');
+    await expect(canvas.locator('[data-osd-step="revealed"]')).toHaveCount(2);
+    await page.keyboard.press(',');
+    await page.keyboard.press(',');
+    await expect(canvas.locator('[data-osd-step="revealed"]')).toHaveCount(0);
+
+    await page.keyboard.press('ArrowRight');
+    await expect(canvas.getByText('Steps page three')).toBeVisible();
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.getByRole('button', { name: 'Stop 2', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(canvas.locator('[data-osd-step="revealed"]')).toHaveCount(2);
+  });
+
+  test('turning on onion skin parks the page and a page change drops the ghost', async ({
+    page,
+  }) => {
+    await openSlide(page, 'steps', '?p=4');
+    const canvas = editorCanvas(page);
+    await page.getByRole('button', { name: /Onion skin/ }).click();
+    await expect(page.getByRole('button', { name: 'Stop 2', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(
+      canvas.locator('[data-osd-onion-skin] [data-testid="timeline-state"]'),
+    ).toHaveAttribute('data-t', '2.00');
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(canvas.getByText('Steps page three')).toBeVisible();
+    await expect(canvas.locator('[data-osd-onion-skin]')).toHaveCount(0);
+    await page.keyboard.press('ArrowLeft');
+    await expect(canvas.locator('[data-osd-step="revealed"]')).toHaveCount(2);
+    await expect(canvas.locator('[data-osd-onion-skin]')).toHaveCount(0);
+  });
+
+  test('the stop strip parks a timeline and onion skin ghosts the previous stop', async ({
+    page,
+  }) => {
+    await openSlide(page, 'steps', '?p=4');
+    const canvas = editorCanvas(page);
+    await page.getByRole('button', { name: 'Stop 1', exact: true }).click();
+    const state = canvas.getByTestId('timeline-state').first();
+    await expect(state).toHaveAttribute('data-stop', '1');
+    await expect(state).toHaveAttribute('data-t', '2.00');
+
+    await page.getByRole('button', { name: /Onion skin/ }).click();
+    const ghost = canvas.locator('[data-osd-onion-skin] [data-testid="timeline-state"]');
+    await expect(ghost).toHaveAttribute('data-t', '1.00');
+    await expect(state).toHaveAttribute('data-t', '2.00');
+    await expect(canvas.locator('[data-osd-onion-skin]')).toHaveAttribute('aria-hidden', 'true');
+  });
+
   test('thumbnail context menu duplicates and deletes a page', async ({ page, request }) => {
     try {
       await duplicateSlide(request, 'alpha', 'thumb-ops');

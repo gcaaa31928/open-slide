@@ -27,11 +27,13 @@ export type StepAggregate = {
   revealed: number;
   stepCount: number;
   playing: boolean;
+  stops: readonly number[] | null;
 };
 
 type Registration = {
   id: object;
   stepCount: number;
+  stops?: readonly number[];
   initialRevealed: number;
   initialPlaying: boolean;
   controller: StepController;
@@ -118,12 +120,14 @@ export function StepHost({
     let revealed = 0;
     let stepCount = 0;
     let playing = false;
+    let stops: readonly number[] | null = null;
     for (const r of registrationsRef.current) {
       revealed += r.revealed;
       stepCount += r.stepCount;
       playing ||= r.playing;
+      stops ??= r.stops ?? null;
     }
-    cb({ revealed, stepCount, playing });
+    cb({ revealed, stepCount, playing, stops });
   }, []);
 
   const distributeControlled = useCallback(() => {
@@ -202,8 +206,11 @@ export type StepBlock = {
   reportPlaying: (playing: boolean) => void;
 };
 
-export function useStepBlock(stepCount: number): StepBlock {
+export function useStepBlock(stepCount: number, stops?: readonly number[]): StepBlock {
   const host = useContext(StepHostContext);
+  const stopsKey = stops?.join(',');
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a fresh array literal each render must not re-register the block
+  const stableStops = useMemo(() => stops, [stopsKey]);
 
   // Controlled mode waits for the host to assign a slice in the registration
   // layout-effect; otherwise the entry direction picks the initial reveal.
@@ -241,12 +248,13 @@ export function useStepBlock(stepCount: number): StepBlock {
     return host.register({
       id,
       stepCount,
+      stops: stableStops,
       initialRevealed: revealedRef.current,
       initialPlaying: playingRef.current,
       controller: ctrl,
       setRevealed: applyRevealed,
     });
-  }, [host, stepCount, applyRevealed]);
+  }, [host, stepCount, stableStops, applyRevealed]);
 
   // Registration re-runs whenever the host context changes, so the flag lives
   // in a ref and is replayed as initialPlaying instead of only being reported.

@@ -144,6 +144,7 @@ export function Player({
     revealed: 0,
     stepCount: 0,
     playing: false,
+    stops: null,
   });
   const handleAggregateChange = useCallback((a: StepAggregate) => {
     setStepAggregate((cur) =>

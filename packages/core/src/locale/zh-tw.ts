@@ -164,6 +164,13 @@ export const zhTW: Locale = {
     noDecksFound: '沒有符合的簡報',
   },
 
+  stepStrip: {
+    label: '停點',
+    stop: '停點',
+    prevAria: '上一個停點 (,)',
+    nextAria: '下一個停點 (.)',
+    onionSkinAria: '疊上一格（onion skin）',
+  },
   present: {
     prevSlideAria: '上一張投影片 (←)',
     nextSlideAria: '下一張投影片 (→)',

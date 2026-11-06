@@ -169,6 +169,13 @@ export type Locale = {
     noDecksFound: string;
   };
 
+  stepStrip: {
+    label: string;
+    stop: string;
+    prevAria: string;
+    nextAria: string;
+    onionSkinAria: string;
+  };
   present: {
     prevSlideAria: string;
     nextSlideAria: string;

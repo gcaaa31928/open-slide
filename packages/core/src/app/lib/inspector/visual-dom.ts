@@ -96,6 +96,20 @@ export function marqueeTargets(
     .map(({ target }) => target);
 }
 
+// The onion-skin ghost re-renders the page, so its copies of every
+// `data-slide-loc` must not count as a second instance of the same JSX.
+export const ONION_SKIN_SELECTOR = '[data-osd-onion-skin]';
+
+export function sourceInstanceCount(target: SelectedTarget, canvas: Canvas): number {
+  let count = 0;
+  for (const el of canvas.root.querySelectorAll(
+    `[data-slide-loc="${target.line}:${target.column}"]`,
+  )) {
+    if (!el.closest(ONION_SKIN_SELECTOR)) count += 1;
+  }
+  return count;
+}
+
 export function canTransform(target: SelectedTarget, canvas: Canvas): boolean {
   const style = getComputedStyle(target.anchor);
   const rect = target.anchor.getBoundingClientRect();
@@ -106,7 +120,7 @@ export function canTransform(target: SelectedTarget, canvas: Canvas): boolean {
     rect.width > 0 &&
     rect.height > 0 &&
     (style.display !== 'inline' || target.anchor instanceof HTMLImageElement) &&
-    canvas.root.querySelectorAll(`[data-slide-loc="${target.line}:${target.column}"]`).length === 1
+    sourceInstanceCount(target, canvas) === 1
   );
 }
 
