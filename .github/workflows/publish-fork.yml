@@ -1,0 +1,151 @@
+name: Stage fork package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to stage, e.g. 2.4.1. It must not be published or staged yet.
+        required: true
+        type: string
+      dry_run:
+        description: Run every check and pack, but don't stage.
+        type: boolean
+        default: false
+
+concurrency: ${{ github.workflow }}
+
+env:
+  PACKAGE_NAME: "@redhuang/open-slide"
+  NPM_REGISTRY: https://registry.npmjs.org
+
+jobs:
+  stage:
+    if: github.repository == 'gcaaa31928/open-slide'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: ${{ env.NPM_REGISTRY }}
+          cache: pnpm
+
+      - name: Upgrade npm for staged publishing
+        run: npm install -g npm@11
+
+      - name: Check the version is free
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          if npm view "$PACKAGE_NAME@$VERSION" version --registry "$NPM_REGISTRY" 2>/dev/null | grep -q .; then
+            echo "::error::$PACKAGE_NAME@$VERSION is already published"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm check
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Check core package contents
+        run: pnpm core check:pack
+
+      - name: Pack and rename
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          OUT="$RUNNER_TEMP/pack"
+          mkdir -p "$OUT"
+          pnpm core exec pnpm pack --pack-destination "$OUT"
+          tar xzf "$OUT"/open-slide-core-*.tgz -C "$OUT"
+          node .github/scripts/prepare-fork-package.mjs "$OUT/package" "$PACKAGE_NAME" "$VERSION" "$GITHUB_REPOSITORY"
+          (cd "$OUT/package" && npm pack --pack-destination "$OUT")
+          echo "PACKAGE_DIR=$OUT/package" >> "$GITHUB_ENV"
+          echo "TARBALL=$(ls "$OUT"/redhuang-open-slide-*.tgz)" >> "$GITHUB_ENV"
+
+      - name: Smoke test the alias install
+        run: |
+          APP="$RUNNER_TEMP/smoke"
+          mkdir -p "$APP/slides/hello"
+          cd "$APP"
+          cat > package.json <<EOF
+          { "name": "smoke", "private": true, "type": "module",
+            "dependencies": { "@open-slide/core": "file:$TARBALL" } }
+          EOF
+          cat > slides/hello/index.tsx <<'EOF'
+          import { CodeMove, type Page, useTimeline } from '@open-slide/core';
+          const P1: Page = () => {
+            const { t } = useTimeline([1, 2]);
+            return <CodeMove t={t} at={[0, 1]} steps={['const a = 1;', 'const a = 2;']} />;
+          };
+          export const meta = { title: 'Smoke' };
+          export default [P1];
+          EOF
+          npm install --no-audit --no-fund
+          npx open-slide build
+          test -f dist/index.html
+
+      - name: Stage on npm
+        id: stage
+        working-directory: ${{ env.PACKAGE_DIR }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+        run: |
+          set -o pipefail
+          npm stage publish --access public --registry "$NPM_REGISTRY" $DRY_RUN 2>&1 | tee "$RUNNER_TEMP/stage.log"
+          ID=$(grep -oE 'staged with id [0-9a-f-]+' "$RUNNER_TEMP/stage.log" | awk '{print $4}' || true)
+          if [ -z "$DRY_RUN" ] && [ -z "$ID" ]; then
+            echo "::error::npm did not report a stage id"
+            exit 1
+          fi
+          echo "id=$ID" >> "$GITHUB_OUTPUT"
+
+      - name: Summary
+        env:
+          VERSION: ${{ inputs.version }}
+          STAGE_ID: ${{ steps.stage.outputs.id }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            if [ "$DRY_RUN" = "true" ]; then
+              echo "## Dry run: $PACKAGE_NAME@$VERSION was not staged"
+            else
+              echo "## $PACKAGE_NAME@$VERSION is staged, waiting for approval"
+              echo
+              echo "Stage id: \`$STAGE_ID\`"
+              echo
+              echo "Approve it with 2FA on npmjs.com, or run:"
+              echo
+              echo '```'
+              echo "npx -y npm@11 stage approve $STAGE_ID --registry $NPM_REGISTRY"
+              echo '```'
+            fi
+            echo
+            echo "### Installing"
+            echo
+            echo "Install it under the upstream name so every \`@open-slide/core\` import keeps working:"
+            echo
+            echo '```json'
+            echo "\"@open-slide/core\": \"npm:$PACKAGE_NAME@^$VERSION\""
+            echo '```'
+            echo
+            echo "- Don't use the dev server's update button. It installs the upstream \`@open-slide/core@latest\` over this package."
+            echo "- The dev server may not show a version number, because it looks itself up by the name \`@open-slide/core\`."
+          } >> "$GITHUB_STEP_SUMMARY"
