@@ -165,6 +165,13 @@ export const en: Locale = {
     noDecksFound: 'No presentations match',
   },
 
+  stepStrip: {
+    label: 'Stops',
+    stop: 'Stop',
+    prevAria: 'Previous stop (,)',
+    nextAria: 'Next stop (.)',
+    onionSkinAria: 'Onion skin: ghost the previous stop',
+  },
   present: {
     prevSlideAria: 'Previous slide (←)',
     nextSlideAria: 'Next slide (→)',

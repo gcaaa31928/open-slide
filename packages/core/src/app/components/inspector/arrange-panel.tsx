@@ -23,7 +23,13 @@ import { Button } from '@/components/ui/button';
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { canTransform, readCanvas, readFrame, readRotation } from '@/lib/inspector/visual-dom';
+import {
+  canTransform,
+  readCanvas,
+  readFrame,
+  readRotation,
+  sourceInstanceCount,
+} from '@/lib/inspector/visual-dom';
 import { useLocale } from '@/lib/use-locale';
 import { round2 } from '@/lib/utils';
 import { useInspector } from './inspector-provider';
@@ -67,11 +73,7 @@ export function ArrangePanel() {
         height: Math.max(...frames.map((frame) => frame.y + frame.height)) - y,
         rotation: anchors.length === 1 ? readRotation(anchors[0]) : 0,
         editable: selection.every((target) => canTransform(target, canvas)),
-        shared: selection.some(
-          (target) =>
-            canvas.root.querySelectorAll(`[data-slide-loc="${target.line}:${target.column}"]`)
-              .length > 1,
-        ),
+        shared: selection.some((target) => sourceInstanceCount(target, canvas) > 1),
       });
     };
     update();

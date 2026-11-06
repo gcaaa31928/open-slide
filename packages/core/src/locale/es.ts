@@ -167,6 +167,13 @@ export const es: Locale = {
     noDecksFound: 'Ninguna presentación coincide',
   },
 
+  stepStrip: {
+    label: 'Paradas',
+    stop: 'Parada',
+    prevAria: 'Parada anterior (,)',
+    nextAria: 'Parada siguiente (.)',
+    onionSkinAria: 'Papel cebolla: superponer la parada anterior',
+  },
   present: {
     prevSlideAria: 'Diapositiva anterior (←)',
     nextSlideAria: 'Diapositiva siguiente (→)',

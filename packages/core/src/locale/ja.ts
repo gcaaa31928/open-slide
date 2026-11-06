@@ -165,6 +165,13 @@ export const ja: Locale = {
     noDecksFound: '一致するデッキがありません',
   },
 
+  stepStrip: {
+    label: 'ストップ',
+    stop: 'ストップ',
+    prevAria: '前のストップ (,)',
+    nextAria: '次のストップ (.)',
+    onionSkinAria: 'オニオンスキン：前のストップを重ねる',
+  },
   present: {
     prevSlideAria: '前のスライド (←)',
     nextSlideAria: '次のスライド (→)',
