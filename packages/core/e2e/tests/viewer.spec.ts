@@ -228,6 +228,37 @@ test.describe('slide viewer', () => {
     }
   });
 
+  test('a page delete right after a notes save survives leaving and reopening the deck', async ({
+    page,
+    request,
+  }) => {
+    test.slow();
+    try {
+      await duplicateSlide(request, 'alpha', 'delete-after-notes');
+      await openSlide(page, 'delete-after-notes');
+      const thumbnails = page.getByRole('button', { name: /^Go to page \d+$/ });
+      await expect(thumbnails).toHaveCount(3);
+
+      const saved = await request.put('/__notes', {
+        data: { slideId: 'delete-after-notes', index: 0, text: 'typed just before the delete' },
+      });
+      expect(saved.ok()).toBe(true);
+      await page.getByRole('button', { name: 'Go to page 3' }).click({ button: 'right' });
+      await page.getByRole('menuitem', { name: 'Delete' }).click();
+      await expect(page.getByText('Deleted page 3')).toBeVisible();
+      await expect
+        .poll(() => readSlideSource('delete-after-notes'))
+        .toContain('export default [One, Two]');
+
+      await page.getByRole('button', { name: 'Back to home' }).click();
+      await page.locator('a[href="/s/delete-after-notes"]').first().click();
+      await expect(editorCanvas(page)).toBeVisible();
+      await expect(thumbnails).toHaveCount(2);
+    } finally {
+      await deleteSlide(request, 'delete-after-notes');
+    }
+  });
+
   test('toolbar title editor renames the deck and saves to disk', async ({ page, request }) => {
     try {
       await duplicateSlide(request, 'edit-target', 'rename-ui');

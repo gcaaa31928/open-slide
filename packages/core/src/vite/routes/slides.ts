@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import type { ViteDevServer } from 'vite';
 import {
+  countDefaultExportPages,
   createBlankSlideDir,
   duplicateNotesElementInSource,
   duplicatePageInDefaultExportInSource,
@@ -33,6 +34,16 @@ type DuplicateSlideBody = { newId?: unknown };
 type SlidePatchBody = { name?: unknown };
 
 export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): void {
+  // A page op that names a page the file no longer has means the client's
+  // page list is stale; telling it the slide changed makes it re-import the
+  // file instead of keeping the list it restores after the failed op.
+  const announceSlideChanged = (slideId: string) =>
+    server.ws.send({
+      type: 'custom',
+      event: 'open-slide:slide-changed',
+      data: { slideIds: [slideId] },
+    });
+
   server.middlewares.use('/__slides', async (req, res, next) => {
     const url = new URL(req.url ?? '/', 'http://local');
     const method = req.method ?? 'GET';
@@ -45,7 +56,7 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
         }
         const created = await createBlankSlideDir(ctx.slidesRoot);
         if (!created.ok) return json(res, created.status, { error: created.error });
-        recordWrite(created.file);
+        recordWrite(created.file, created.source);
         invalidateSlidesModule(server);
         return json(res, 200, { ok: true, slideId: created.slideId });
       }
@@ -79,6 +90,7 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
 
         const reordered = reorderDefaultExportPagesInSource(source, order);
         if (reordered === null) {
+          announceSlideChanged(slideId);
           return json(res, 422, {
             error: 'could not reorder pages — order must be a permutation of the existing array',
           });
@@ -126,10 +138,16 @@ export function registerSlideRoutes(server: ViteDevServer, ctx: ApiContext): voi
           ? removePageFromDefaultExportInSource(source, pageIndex)
           : duplicatePageInDefaultExportInSource(source, pageIndex);
         if (updated === null) {
+          const verb = isDelete ? 'delete' : 'duplicate';
+          const count = countDefaultExportPages(source);
+          if (count === null) {
+            return json(res, 422, {
+              error: `could not ${verb} page — default export is not an array`,
+            });
+          }
+          announceSlideChanged(slideId);
           return json(res, 422, {
-            error: isDelete
-              ? 'could not delete page — index out of range or default export is not an array'
-              : 'could not duplicate page — index out of range or default export is not an array',
+            error: `could not ${verb} page — page ${pageIndex + 1} does not exist, the slide has ${count} page${count === 1 ? '' : 's'}`,
           });
         }
         const withNotes = isDelete
