@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { applyNotesEdit, renderNoteLiteral } from './notes-plugin.ts';
-import { hasRecentWrite, RECENT_WRITE_WINDOW_MS, recordWrite } from './recent-writes.ts';
+import {
+  hasRecentWrite,
+  isRecentWrite,
+  RECENT_WRITE_WINDOW_MS,
+  recordWrite,
+} from './recent-writes.ts';
 
 describe('renderNoteLiteral', () => {
   it('returns undefined for empty strings', () => {
@@ -145,21 +150,55 @@ describe('recent-writes window', () => {
   it('reports a freshly recorded write as recent for the whole window', () => {
     const file = '/slides/recent-a/index.tsx';
     const now = 1_000_000;
-    recordWrite(file, now);
+    recordWrite(file, 'written', now);
     expect(hasRecentWrite(file, now)).toBe(true);
     expect(hasRecentWrite(file, now + RECENT_WRITE_WINDOW_MS - 1)).toBe(true);
   });
 
-  it('treats an unrecorded file as not recent', () => {
-    expect(hasRecentWrite('/slides/never-written/index.tsx', 1)).toBe(false);
+  it('treats an unrecorded file as not recent without reading it', async () => {
+    const file = '/slides/never-written/index.tsx';
+    expect(hasRecentWrite(file, 1)).toBe(false);
+    let reads = 0;
+    const read = () => {
+      reads++;
+      return 'anything';
+    };
+    expect(await isRecentWrite(file, read, 1)).toBe(false);
+    expect(reads).toBe(0);
   });
 
   it('expires entries after the window so a later genuine edit is not suppressed', () => {
     const file = '/slides/recent-b/index.tsx';
     const now = 2_000_000;
-    recordWrite(file, now);
+    recordWrite(file, 'written', now);
     expect(hasRecentWrite(file, now + RECENT_WRITE_WINDOW_MS)).toBe(false);
     // The expired entry is pruned, so a subsequent check stays false too.
     expect(hasRecentWrite(file, now + RECENT_WRITE_WINDOW_MS + 5_000)).toBe(false);
+  });
+
+  it('only matches a change whose content is exactly what was written', async () => {
+    const file = '/slides/recent-c/index.tsx';
+    const now = 3_000_000;
+    recordWrite(file, 'after the notes save', now);
+    expect(await isRecentWrite(file, () => 'after the notes save', now + 100)).toBe(true);
+    expect(await isRecentWrite(file, async () => 'after a page delete', now + 200)).toBe(false);
+    expect(await isRecentWrite(file, () => 'after the notes save', now + 300)).toBe(true);
+    expect(
+      await isRecentWrite(file, () => 'after the notes save', now + RECENT_WRITE_WINDOW_MS),
+    ).toBe(false);
+  });
+
+  it('keeps every write inside the window so an event for an earlier save still matches', async () => {
+    const file = '/slides/recent-d/index.tsx';
+    const now = 4_000_000;
+    recordWrite(file, 'first save', now);
+    recordWrite(file, 'second save', now + 50);
+    expect(await isRecentWrite(file, () => 'first save', now + 60)).toBe(true);
+    expect(await isRecentWrite(file, () => 'second save', now + 60)).toBe(true);
+    expect(await isRecentWrite(file, () => 'a page delete', now + 60)).toBe(false);
+    expect(await isRecentWrite(file, () => 'first save', now + RECENT_WRITE_WINDOW_MS)).toBe(false);
+    expect(await isRecentWrite(file, () => 'second save', now + RECENT_WRITE_WINDOW_MS + 49)).toBe(
+      true,
+    );
   });
 });

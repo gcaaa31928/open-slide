@@ -6,7 +6,7 @@ import { loadConfigFromFile, normalizePath, type Plugin, type ViteDevServer } fr
 import type { OpenSlideConfig } from '../config.ts';
 import { SLIDE_ID_RE } from '../editing/slide-ops.ts';
 import { foldersManifestPath, readManifest } from '../files/folders.ts';
-import { hasRecentWrite } from './recent-writes.ts';
+import { hasRecentWrite, isRecentWrite } from './recent-writes.ts';
 
 export type { OpenSlideConfig };
 
@@ -243,15 +243,16 @@ export function openSlidePlugin(opts: OpenSlidePluginOptions): Plugin {
       }
       return null;
     },
-    handleHotUpdate(ctx) {
+    async handleHotUpdate(ctx) {
       const slideId = slideIdForEntry(ctx.file);
       if (!slideId) return;
       // A speaker-note save writes the slide file itself. The notes plugin
       // records that write so we can recognise it here and skip the
       // `slide-changed` broadcast, which would otherwise bump the dev
       // cache-bust token and remount the slide canvas. Genuine source edits
-      // are never recorded, so they keep full HMR behaviour.
-      if (hasRecentWrite(ctx.file)) return [];
+      // are never recorded, and a recorded write only matches while the file
+      // still holds what was written, so they keep full HMR behaviour.
+      if (await isRecentWrite(ctx.file, ctx.read)) return [];
       queueSlideChanged(ctx.server, slideId);
       return [];
     },

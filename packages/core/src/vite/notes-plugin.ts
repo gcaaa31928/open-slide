@@ -5,7 +5,7 @@ import type { Plugin, ViteDevServer } from 'vite';
 import { parseSource } from '../editing/babel-walk.ts';
 import { resolveSlideEntry } from '../editing/slide-ops.ts';
 import { validateMutationRequest } from '../http/request-guard.ts';
-import { hasRecentWrite, recordWrite } from './recent-writes.ts';
+import { isRecentWrite, recordWrite } from './recent-writes.ts';
 import { json, readBody, readSlideSource } from './routes/context.ts';
 
 type NotesBody = {
@@ -154,10 +154,10 @@ export function notesPlugin(opts: NotesPluginOptions): Plugin {
   return {
     name: 'open-slide:notes',
     apply: 'serve',
-    handleHotUpdate(ctx) {
+    async handleHotUpdate(ctx) {
       // Suppress HMR for our own writes — RFR bails on the slide's mixed
       // exports and remounts the tree, stealing textarea focus mid-typing.
-      if (hasRecentWrite(ctx.file)) return [];
+      if (await isRecentWrite(ctx.file, ctx.read)) return [];
       return undefined;
     },
     configureServer(server: ViteDevServer) {
@@ -183,7 +183,7 @@ export function notesPlugin(opts: NotesPluginOptions): Plugin {
           if (!result.ok) return json(res, result.status, { error: result.error });
           const changed = result.source !== source;
           if (changed) {
-            recordWrite(file);
+            recordWrite(file, result.source);
             await fs.writeFile(file, result.source, 'utf8');
           }
           return json(res, 200, { ok: true, changed });

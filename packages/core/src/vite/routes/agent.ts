@@ -124,10 +124,10 @@ async function renamePlaceholderDeck(
   // A new turn may have started while the file was read; it must not lose the
   // folder it is writing into.
   if (store.list().some((s) => s.slideId === slideId && s.status === 'running')) return;
-  recordWrite(entry);
+  recordWrite(entry, source);
   const renamed = await renameSlideDir(ctx.slidesRoot, slideId, desired);
   if (!renamed.ok) return;
-  recordWrite(path.join(renamed.to, 'index.tsx'));
+  recordWrite(path.join(renamed.to, 'index.tsx'), source);
 
   const manifest = await readManifest(ctx.manifestPath);
   const folderId = manifest.assignments[slideId];

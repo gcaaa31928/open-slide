@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  countDefaultExportPages,
   createBlankSlideDir,
   duplicateNotesElementInSource,
   duplicatePageInDefaultExportInSource,
@@ -586,5 +587,16 @@ describe('duplicateNotesElementInSource', () => {
   it('returns null when notes is not an array literal', () => {
     const source = `export const notes = "oops";\nexport default [A];\n`;
     expect(duplicateNotesElementInSource(source, 0)).toBeNull();
+  });
+});
+
+describe('countDefaultExportPages', () => {
+  it('counts the elements of the default export array', () => {
+    expect(countDefaultExportPages('export default [A, B, C] satisfies Page[];')).toBe(3);
+    expect(countDefaultExportPages('export default [];')).toBe(0);
+  });
+
+  it('returns null when the default export is not an array', () => {
+    expect(countDefaultExportPages('const pages = [A];\nexport default pages;')).toBeNull();
   });
 });

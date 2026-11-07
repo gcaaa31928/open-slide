@@ -208,7 +208,8 @@ export default [Blank] satisfies Page[];
 export async function createBlankSlideDir(
   slidesRoot: string,
 ): Promise<
-  { ok: true; slideId: string; file: string } | { ok: false; status: number; error: string }
+  | { ok: true; slideId: string; file: string; source: string }
+  | { ok: false; status: number; error: string }
 > {
   const root = path.resolve(slidesRoot);
   await fs.mkdir(root, { recursive: true });
@@ -223,8 +224,9 @@ export async function createBlankSlideDir(
       return { ok: false, status: 500, error: String((err as Error).message ?? err) };
     }
     const file = path.join(dir, 'index.tsx');
-    await fs.writeFile(file, blankSlideSource(new Date().toISOString()), 'utf8');
-    return { ok: true, slideId, file };
+    const source = blankSlideSource(new Date().toISOString());
+    await fs.writeFile(file, source, 'utf8');
+    return { ok: true, slideId, file, source };
   }
   return { ok: false, status: 409, error: 'no free slide id' };
 }
@@ -387,6 +389,10 @@ function findDefaultExportArray(
     return { elements, arrayStart, arrayEnd };
   }
   return null;
+}
+
+export function countDefaultExportPages(source: string): number | null {
+  return findDefaultExportArray(source)?.elements.length ?? null;
 }
 
 /**
